@@ -9,7 +9,7 @@ if ($db_url) {
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-        // Create tables if not exist (PostgreSQL syntax)
+        // Create all tables (PostgreSQL syntax)
         $db->exec("CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
@@ -66,15 +66,15 @@ if ($db_url) {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 
-        // Optional indexes for speed
+        // Indexes for performance
         $db->exec("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)");
         $db->exec("CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)");
         $db->exec("CREATE INDEX IF NOT EXISTS idx_deposits_user_id ON deposits(user_id)");
         $db->exec("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)");
 
     } catch (PDOException $e) {
-        error_log("PostgreSQL connection failed: " . $e->getMessage());
-        die("Database error. Please check your configuration.");
+        // Show the real error message (for debugging – remove later!)
+        die("PostgreSQL connection error: " . $e->getMessage());
     }
 } else {
     // --- SQLite (local development) ---
@@ -83,7 +83,7 @@ if ($db_url) {
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-        // SQLite table creation (uses same schema but different syntax)
+        // Create all tables (SQLite syntax)
         $db->exec("CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -140,17 +140,16 @@ if ($db_url) {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )");
 
-        // SQLite doesn't support CREATE INDEX IF NOT EXISTS in older versions, so we'll just try
+        // Indexes (SQLite – ignore errors if they already exist)
         @$db->exec("CREATE INDEX idx_users_username ON users(username)");
         @$db->exec("CREATE INDEX idx_users_referral_code ON users(referral_code)");
         @$db->exec("CREATE INDEX idx_deposits_user_id ON deposits(user_id)");
         @$db->exec("CREATE INDEX idx_transactions_user_id ON transactions(user_id)");
 
     } catch (PDOException $e) {
-        error_log("SQLite connection failed: " . $e->getMessage());
-        die("Database error. Please check your configuration.");
+        die("SQLite connection error: " . $e->getMessage());
     }
 }
 
-// Make $db globally available
+// Make $db available globally
 ?>
