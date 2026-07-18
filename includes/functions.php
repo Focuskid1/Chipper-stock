@@ -38,7 +38,15 @@ function getReferralCount($user_id) {
 
 function getReferralBonusEarned($user_id) {
     global $db;
-    $stmt = $db->prepare("SELECT COALESCE(SUM(bonus), 0) as total FROM referrals WHERE referrer_id = ?");
+    $stmt = $db->prepare("SELECT COALESCE(SUM(bonus), 0) as total FROM referrals WHERE referrer_id = ? AND bonus > 0");
+    $stmt->execute([$user_id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row['total'] ?? 0;
+}
+
+function getReferralBonusPending($user_id) {
+    global $db;
+    $stmt = $db->prepare("SELECT COALESCE(SUM(bonus), 0) as total FROM referrals WHERE referrer_id = ? AND bonus = 0");
     $stmt->execute([$user_id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return $row['total'] ?? 0;
@@ -117,30 +125,66 @@ function addProfitIfNeeded($user_id) {
 }
 
 // --- REFERRAL BONUS SYSTEM ---
-function checkAndApplyReferralBonus($user_id) {
-    $ref_count = getReferralCount($user_id);
+function getReferralMilestone($ref_count) {
+    if ($ref_count >= 10) {
+        return 10;
+    }
+    return 0;
+}
+
+function checkAndApplyReferralBonus($referrer_id) {
+    global $db;
+    $ref_count = getReferralCount($referrer_id);
     
-    // Check if referral count is a multiple of 10 (10, 20, 30, etc.)
-    if ($ref_count > 0 && $ref_count % 10 == 0) {
-        // Check if bonus was already given for this milestone
-        global $db;
+    $milestone = getReferralMilestone($ref_count);
+    
+    if ($milestone > 0) {
         $stmt = $db->prepare("SELECT COUNT(*) as count FROM transactions WHERE user_id = ? AND type = 'referral_bonus' AND description LIKE ?");
-        $stmt->execute([$user_id, 'Referral Bonus (10 referrals)%']);
+        $stmt->execute([$referrer_id, '%' . $milestone . ' referrals%']);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // If no bonus for this milestone, give it
         if ($row['count'] == 0) {
-            $bonus_amount = getUser($user_id)['balance'] * 0.20; // 20% of current balance
+            $user = getUser($referrer_id);
+            $bonus_amount = $user['balance'] * 0.20;
+            
             if ($bonus_amount > 0) {
-                updateBalance($user_id, $bonus_amount);
-                addTransaction($user_id, 'referral_bonus', $bonus_amount, "Referral Bonus (10 referrals) - 20% of balance");
+                $stmt = $db->prepare("UPDATE referrals SET bonus = ? WHERE referrer_id = ? AND bonus = 0");
+                $stmt->execute([$bonus_amount, $referrer_id]);
+                
+                addTransaction($referrer_id, 'referral_bonus_pending', $bonus_amount, "Pending Referral Bonus (" . $milestone . " referrals) - 20% of balance (will credit in 24 hours)");
+                
                 return true;
             }
         }
     }
     return false;
 }
-?>
+
+function processPendingReferralBonuses($user_id) {
+    global $db;
+    
+    $stmt = $db->prepare("SELECT SUM(bonus) as total FROM referrals WHERE referrer_id = ? AND bonus > 0");
+    $stmt->execute([$user_id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $pending_total = $row['total'] ?? 0;
+    
+    if ($pending_total > 0) {
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM transactions WHERE user_id = ? AND type = 'referral_bonus_credit' AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+        $stmt->execute([$user_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($row['count'] == 0) {
+            updateBalance($user_id, $pending_total);
+            addTransaction($user_id, 'referral_bonus_credit', $pending_total, "Referral Bonus Credited (20% of balance)");
+            
+            $stmt = $db->prepare("UPDATE referrals SET bonus = 0 WHERE referrer_id = ? AND bonus > 0");
+            $stmt->execute([$user_id]);
+            
+            return true;
+        }
+    }
+    return false;
+}
 
 // --- CURRENCY CONVERSION FUNCTIONS ---
 function getExchangeRate() {
@@ -184,7 +228,7 @@ function getExchangeRate() {
         }
     } catch (Exception $e) {
         // Fallback to a default rate if API fails
-        return 1550; // Default rate (will be updated when API works)
+        return 1550;
     }
     
     return 1550; // Fallback rate
