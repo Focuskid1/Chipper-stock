@@ -147,15 +147,31 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
         border-radius: 12px;
         padding: 12px 16px;
         margin-bottom: 8px;
-        border-left: 4px solid #0d6efd;
         border: 1px solid #e9edf2;
-        border-left-width: 4px;
+        transition: all 0.2s ease;
     }
-    .deposit-card.pending {
-        border-left-color: #ffc107;
+    .deposit-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
-    .deposit-card.confirmed {
-        border-left-color: #198754;
+    .deposit-card.pending-deposit {
+        border-left: 4px solid #ffc107;
+    }
+    .deposit-card.confirmed-deposit {
+        border-left: 4px solid #198754;
+    }
+    .deposit-card.pending-withdrawal {
+        border-left: 4px solid #ffc107;
+    }
+    .deposit-card.confirmed-withdrawal {
+        border-left: 4px solid #dc3545;
+    }
+    .deposit-card .amount-positive {
+        color: #198754;
+        font-weight: 700;
+    }
+    .deposit-card .amount-negative {
+        color: #dc3545;
+        font-weight: 700;
     }
     .deposit-card .method-badge {
         font-size: 0.75rem;
@@ -243,6 +259,20 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     .empty-state h5 {
         color: #3a4b5e;
+    }
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 2px 10px;
+        border-radius: 30px;
+        font-weight: 600;
+    }
+    .status-badge.pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+    .status-badge.confirmed {
+        background: #d1e7dd;
+        color: #0a3622;
     }
 </style>
 </head>
@@ -355,7 +385,7 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <!-- Tab Buttons -->
                         <div class="classy-tabs" id="activityTabs">
                             <button class="tab-btn active" data-tab="pending-deposits">
-                                <i class="fas fa-clock tab-icon"></i> Pending Deposits
+                                <i class="fas fa-clock tab-icon text-warning"></i> Pending Deposits
                                 <span class="badge-count"><?php echo count($pending_deposits); ?></span>
                             </button>
                             <button class="tab-btn" data-tab="confirmed-deposits">
@@ -376,17 +406,17 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="tab-content active" id="tab-pending-deposits">
                             <?php if (!empty($pending_deposits)): ?>
                                 <?php foreach($pending_deposits as $deposit): ?>
-                                    <div class="deposit-card pending">
+                                    <div class="deposit-card pending-deposit">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
-                                                <strong>$<?php echo number_format($deposit['amount'], 2); ?></strong>
+                                                <span class="amount-positive">+ $<?php echo number_format($deposit['amount'], 2); ?></span>
                                                 <span class="method-badge <?php echo ($deposit['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
                                                     <i class="fas <?php echo ($deposit['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
                                                     <?php echo $deposit['method']; ?>
                                                 </span>
                                             </div>
                                             <div>
-                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                <span class="status-badge pending">Pending</span>
                                                 <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($deposit['created_at'])); ?></small>
                                             </div>
                                         </div>
@@ -416,17 +446,17 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="tab-content" id="tab-confirmed-deposits">
                             <?php if (!empty($confirmed_deposits)): ?>
                                 <?php foreach($confirmed_deposits as $deposit): ?>
-                                    <div class="deposit-card confirmed">
+                                    <div class="deposit-card confirmed-deposit">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
-                                                <strong>$<?php echo number_format($deposit['amount'], 2); ?></strong>
+                                                <span class="amount-positive">+ $<?php echo number_format($deposit['amount'], 2); ?></span>
                                                 <span class="method-badge <?php echo ($deposit['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
                                                     <i class="fas <?php echo ($deposit['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
                                                     <?php echo $deposit['method']; ?>
                                                 </span>
                                             </div>
                                             <div>
-                                                <span class="badge bg-success">Confirmed</span>
+                                                <span class="status-badge confirmed">Confirmed</span>
                                                 <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($deposit['created_at'])); ?></small>
                                             </div>
                                         </div>
@@ -453,16 +483,16 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="tab-content" id="tab-pending-withdrawals">
                             <?php if (!empty($pending_withdrawals)): ?>
                                 <?php foreach($pending_withdrawals as $withdrawal): ?>
-                                    <div class="deposit-card pending">
+                                    <div class="deposit-card pending-withdrawal">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
-                                                <strong>$<?php echo number_format($withdrawal['amount'], 2); ?></strong>
+                                                <span class="amount-negative">- $<?php echo number_format($withdrawal['amount'], 2); ?></span>
                                                 <span class="method-badge bank">
                                                     <i class="fas fa-university"></i> <?php echo htmlspecialchars($withdrawal['method']); ?>
                                                 </span>
                                             </div>
                                             <div>
-                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                <span class="status-badge pending">Pending</span>
                                                 <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($withdrawal['created_at'])); ?></small>
                                             </div>
                                         </div>
@@ -486,16 +516,16 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="tab-content" id="tab-confirmed-withdrawals">
                             <?php if (!empty($confirmed_withdrawals)): ?>
                                 <?php foreach($confirmed_withdrawals as $withdrawal): ?>
-                                    <div class="deposit-card confirmed">
+                                    <div class="deposit-card confirmed-withdrawal">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
-                                                <strong>$<?php echo number_format($withdrawal['amount'], 2); ?></strong>
+                                                <span class="amount-negative">- $<?php echo number_format($withdrawal['amount'], 2); ?></span>
                                                 <span class="method-badge bank">
                                                     <i class="fas fa-university"></i> <?php echo htmlspecialchars($withdrawal['method']); ?>
                                                 </span>
                                             </div>
                                             <div>
-                                                <span class="badge bg-success">Confirmed</span>
+                                                <span class="status-badge confirmed">Confirmed</span>
                                                 <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($withdrawal['created_at'])); ?></small>
                                             </div>
                                         </div>

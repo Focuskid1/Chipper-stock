@@ -78,6 +78,28 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
     .table td {
         vertical-align: middle;
     }
+    .amount-positive {
+        color: #198754;
+        font-weight: 700;
+    }
+    .amount-negative {
+        color: #dc3545;
+        font-weight: 700;
+    }
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 2px 10px;
+        border-radius: 30px;
+        font-weight: 600;
+    }
+    .status-badge.pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+    .status-badge.confirmed {
+        background: #d1e7dd;
+        color: #0a3622;
+    }
     
     /* ─── CLASSY ADMIN TABS ─── */
     .admin-tabs {
@@ -155,14 +177,14 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
                 <span class="badge-count"><?php echo $users->rowCount(); ?></span>
             </button>
             <button class="tab-btn" data-tab="pending-deposits">
-                <i class="fas fa-clock tab-icon text-warning"></i> Pending Deposits
+                <i class="fas fa-arrow-up tab-icon text-success"></i> Pending Deposits
                 <?php 
                     $pending_deposits_count = $db->query("SELECT COUNT(*) as count FROM deposits WHERE status = 'pending'")->fetch(PDO::FETCH_ASSOC)['count'];
                 ?>
                 <span class="badge-count"><?php echo $pending_deposits_count; ?></span>
             </button>
             <button class="tab-btn" data-tab="pending-withdrawals">
-                <i class="fas fa-clock tab-icon text-warning"></i> Pending Withdrawals
+                <i class="fas fa-arrow-down tab-icon text-danger"></i> Pending Withdrawals
                 <?php 
                     $pending_withdrawals_count = $db->query("SELECT COUNT(*) as count FROM withdrawals WHERE status = 'pending'")->fetch(PDO::FETCH_ASSOC)['count'];
                 ?>
@@ -186,7 +208,7 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
             </div>
         </div>
 
-        <!-- Tab Content: Pending Deposits -->
+        <!-- Tab Content: Pending Deposits (Green / Positive) -->
         <div class="admin-tab-content" id="admin-tab-pending-deposits">
             <div class="table-wrapper">
                 <table class="table table-striped">
@@ -214,7 +236,7 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
                         <tr>
                             <td><?php echo $row['id']; ?></td>
                             <td><?php echo $user ? $user['username'] : 'Unknown'; ?></td>
-                            <td><strong>$<?php echo number_format($row['amount'], 2); ?></strong></td>
+                            <td><span class="amount-positive">+ $<?php echo number_format($row['amount'], 2); ?></span></td>
                             <td>
                                 <span class="method-badge <?php echo ($row['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
                                     <i class="fas <?php echo ($row['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
@@ -237,7 +259,7 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
                                     </span>
                                 <?php endif; ?>
                             </td>
-                            <td><span class="badge bg-warning text-dark"><?php echo $row['status']; ?></span></td>
+                            <td><span class="status-badge pending">Pending</span></td>
                             <td>
                                 <a href="?confirm_deposit=<?php echo $row['id']; ?>" class="btn btn-success btn-sm" onclick="return confirm('Confirm this deposit?')">
                                     <i class="fas fa-check"></i> Confirm
@@ -250,7 +272,7 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
             </div>
         </div>
 
-        <!-- Tab Content: Pending Withdrawals -->
+        <!-- Tab Content: Pending Withdrawals (Red / Negative) -->
         <div class="admin-tab-content" id="admin-tab-pending-withdrawals">
             <div class="table-wrapper">
                 <table class="table table-striped">
@@ -275,10 +297,10 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
                         <tr>
                             <td><?php echo $row['id']; ?></td>
                             <td><?php echo $user ? $user['username'] : 'Unknown'; ?></td>
-                            <td><strong>$<?php echo number_format($row['amount'], 2); ?></strong></td>
+                            <td><span class="amount-negative">- $<?php echo number_format($row['amount'], 2); ?></span></td>
                             <td><?php echo htmlspecialchars($row['method']); ?></td>
                             <td><?php echo htmlspecialchars($row['account_details']); ?></td>
-                            <td><span class="badge bg-warning text-dark"><?php echo $row['status']; ?></span></td>
+                            <td><span class="status-badge pending">Pending</span></td>
                             <td>
                                 <a href="?confirm_withdrawal=<?php echo $row['id']; ?>" class="btn btn-success btn-sm" onclick="return confirm('Confirm this withdrawal?')">
                                     <i class="fas fa-check"></i> Confirm
