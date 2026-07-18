@@ -78,6 +78,65 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
     .table td {
         vertical-align: middle;
     }
+    
+    /* ─── CLASSY ADMIN TABS ─── */
+    .admin-tabs {
+        border-bottom: 2px solid #e9edf2;
+        margin-bottom: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .admin-tabs .tab-btn {
+        padding: 12px 24px;
+        border: none;
+        background: transparent;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #6b7a93;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border-radius: 8px 8px 0 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .admin-tabs .tab-btn:hover {
+        color: #0d1a2b;
+        background: #f8faff;
+    }
+    .admin-tabs .tab-btn.active {
+        color: #0d6efd;
+        border-bottom-color: #0d6efd;
+        background: #f8faff;
+    }
+    .admin-tabs .tab-btn .badge-count {
+        background: #e8f4fd;
+        color: #0d6efd;
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 30px;
+        font-weight: 600;
+    }
+    .admin-tabs .tab-btn.active .badge-count {
+        background: #0d6efd;
+        color: #fff;
+    }
+    .admin-tabs .tab-btn .tab-icon {
+        font-size: 1rem;
+    }
+    .admin-tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+    .admin-tab-content.active {
+        display: block;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 </head>
 <body>
@@ -85,136 +144,179 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
     <h1><i class="fas fa-shield-alt text-primary"></i> Admin Panel</h1>
     <?php displayFlash('success'); ?>
     
-    <!-- Users Table -->
-    <div class="card shadow p-3 mb-4">
-        <h3><i class="fas fa-users"></i> Users</h3>
-        <div class="table-wrapper">
-            <table class="table table-striped">
-                <thead><tr><th>ID</th><th>Username</th><th>Balance</th><th>Referrals</th><th>Registered</th></tr></thead>
-                <tbody>
-                <?php while($row = $users->fetch(PDO::FETCH_ASSOC)): ?>
-                    <tr><td><?php echo $row['id']; ?></td><td><?php echo $row['username']; ?></td><td>$<?php echo number_format($row['balance'], 2); ?></td><td><?php echo getReferralCount($row['id']); ?></td><td><?php echo $row['registered_at']; ?></td></tr>
-                <?php endwhile; ?>
-                </tbody>
-            </table>
+    <!-- ============================================================ -->
+    <!-- CLASSY ADMIN TABS -->
+    <!-- ============================================================ -->
+    <div class="card shadow p-3">
+        <!-- Tab Buttons -->
+        <div class="admin-tabs" id="adminTabs">
+            <button class="tab-btn active" data-tab="users">
+                <i class="fas fa-users tab-icon"></i> Users
+                <span class="badge-count"><?php echo $users->rowCount(); ?></span>
+            </button>
+            <button class="tab-btn" data-tab="pending-deposits">
+                <i class="fas fa-clock tab-icon text-warning"></i> Pending Deposits
+                <?php 
+                    $pending_deposits_count = $db->query("SELECT COUNT(*) as count FROM deposits WHERE status = 'pending'")->fetch(PDO::FETCH_ASSOC)['count'];
+                ?>
+                <span class="badge-count"><?php echo $pending_deposits_count; ?></span>
+            </button>
+            <button class="tab-btn" data-tab="pending-withdrawals">
+                <i class="fas fa-clock tab-icon text-warning"></i> Pending Withdrawals
+                <?php 
+                    $pending_withdrawals_count = $db->query("SELECT COUNT(*) as count FROM withdrawals WHERE status = 'pending'")->fetch(PDO::FETCH_ASSOC)['count'];
+                ?>
+                <span class="badge-count"><?php echo $pending_withdrawals_count; ?></span>
+            </button>
         </div>
-    </div>
-    
-    <!-- Pending Deposits -->
-    <div class="card shadow p-3 mb-4">
-        <h3><i class="fas fa-clock text-warning"></i> Pending Deposits</h3>
-        <div class="table-wrapper">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>User</th>
-                        <th>Amount</th>
-                        <th>Method</th>
-                        <th>Depositor</th>
-                        <th>Phone</th>
-                        <th>Bank</th>
-                        <th>Reference</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php while($row = $deposits->fetch(PDO::FETCH_ASSOC)): ?>
-                    <tr>
-                        <td><?php echo $row['id']; ?></td>
-                        <td>
-                            <?php 
-                            $user = getUser($row['user_id']);
-                            echo $user ? $user['username'] : 'Unknown';
-                            ?>
-                        </td>
-                        <td><strong>$<?php echo number_format($row['amount'], 2); ?></strong></td>
-                        <td>
-                            <span class="method-badge <?php echo ($row['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
-                                <i class="fas <?php echo ($row['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
-                                <?php echo $row['method']; ?>
-                            </span>
-                        </td>
-                        <td><?php echo htmlspecialchars($row['depositor_name']); ?></td>
-                        <td><?php echo htmlspecialchars($row['depositor_phone']); ?></td>
-                        <td><?php echo htmlspecialchars($row['depositor_bank']); ?></td>
-                        <td>
-                            <?php if ($row['method'] == 'ETH Transfer'): ?>
-                                <span class="text-truncate d-inline-block" style="max-width: 150px;" title="<?php echo htmlspecialchars($row['transaction_ref']); ?>">
-                                    <i class="fas fa-link text-success"></i> 
-                                    <?php echo htmlspecialchars(substr($row['transaction_ref'], 0, 20)) . '...'; ?>
+
+        <!-- Tab Content: Users -->
+        <div class="admin-tab-content active" id="admin-tab-users">
+            <div class="table-wrapper">
+                <table class="table table-striped">
+                    <thead><tr><th>ID</th><th>Username</th><th>Balance</th><th>Referrals</th><th>Registered</th></tr></thead>
+                    <tbody>
+                    <?php 
+                    $users->execute();
+                    while($row = $users->fetch(PDO::FETCH_ASSOC)): ?>
+                        <tr><td><?php echo $row['id']; ?></td><td><?php echo $row['username']; ?></td><td>$<?php echo number_format($row['balance'], 2); ?></td><td><?php echo getReferralCount($row['id']); ?></td><td><?php echo $row['registered_at']; ?></td></tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab Content: Pending Deposits -->
+        <div class="admin-tab-content" id="admin-tab-pending-deposits">
+            <div class="table-wrapper">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Depositor</th>
+                            <th>Phone</th>
+                            <th>Bank</th>
+                            <th>Reference</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php 
+                    $deposits->execute();
+                    while($row = $deposits->fetch(PDO::FETCH_ASSOC)): 
+                        if ($row['status'] != 'pending') continue;
+                        $user = getUser($row['user_id']);
+                    ?>
+                        <tr>
+                            <td><?php echo $row['id']; ?></td>
+                            <td><?php echo $user ? $user['username'] : 'Unknown'; ?></td>
+                            <td><strong>$<?php echo number_format($row['amount'], 2); ?></strong></td>
+                            <td>
+                                <span class="method-badge <?php echo ($row['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
+                                    <i class="fas <?php echo ($row['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
+                                    <?php echo $row['method']; ?>
                                 </span>
-                            <?php else: ?>
-                                <span class="text-truncate d-inline-block" style="max-width: 120px;" title="<?php echo htmlspecialchars($row['transaction_ref']); ?>">
-                                    <i class="fas fa-receipt"></i> 
-                                    <?php echo htmlspecialchars($row['transaction_ref']); ?>
-                                </span>
-                            <?php endif; ?>
-                        </td>
-                        <td><span class="badge bg-warning text-dark"><?php echo $row['status']; ?></span></td>
-                        <td>
-                            <?php if ($row['status'] == 'pending'): ?>
+                            </td>
+                            <td><?php echo htmlspecialchars($row['depositor_name']); ?></td>
+                            <td><?php echo htmlspecialchars($row['depositor_phone']); ?></td>
+                            <td><?php echo htmlspecialchars($row['depositor_bank']); ?></td>
+                            <td>
+                                <?php if ($row['method'] == 'ETH Transfer'): ?>
+                                    <span class="text-truncate d-inline-block" style="max-width: 150px;" title="<?php echo htmlspecialchars($row['transaction_ref']); ?>">
+                                        <i class="fas fa-link text-success"></i> 
+                                        <?php echo htmlspecialchars(substr($row['transaction_ref'], 0, 20)) . '...'; ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-truncate d-inline-block" style="max-width: 120px;" title="<?php echo htmlspecialchars($row['transaction_ref']); ?>">
+                                        <i class="fas fa-receipt"></i> 
+                                        <?php echo htmlspecialchars($row['transaction_ref']); ?>
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                            <td><span class="badge bg-warning text-dark"><?php echo $row['status']; ?></span></td>
+                            <td>
                                 <a href="?confirm_deposit=<?php echo $row['id']; ?>" class="btn btn-success btn-sm" onclick="return confirm('Confirm this deposit?')">
                                     <i class="fas fa-check"></i> Confirm
                                 </a>
-                            <?php else: ?>
-                                <span class="badge bg-success">✅ Done</span>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endwhile; ?>
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
-    
-    <!-- Pending Withdrawals -->
-    <div class="card shadow p-3">
-        <h3><i class="fas fa-clock text-warning"></i> Pending Withdrawals</h3>
-        <div class="table-wrapper">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>User</th>
-                        <th>Amount</th>
-                        <th>Method</th>
-                        <th>Account Details</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php while($row = $withdrawals->fetch(PDO::FETCH_ASSOC)): ?>
-                    <tr>
-                        <td><?php echo $row['id']; ?></td>
-                        <td>
-                            <?php 
-                            $user = getUser($row['user_id']);
-                            echo $user ? $user['username'] : 'Unknown';
-                            ?>
-                        </td>
-                        <td><strong>$<?php echo number_format($row['amount'], 2); ?></strong></td>
-                        <td><?php echo htmlspecialchars($row['method']); ?></td>
-                        <td><?php echo htmlspecialchars($row['account_details']); ?></td>
-                        <td><span class="badge bg-warning text-dark"><?php echo $row['status']; ?></span></td>
-                        <td>
-                            <?php if ($row['status'] == 'pending'): ?>
+
+        <!-- Tab Content: Pending Withdrawals -->
+        <div class="admin-tab-content" id="admin-tab-pending-withdrawals">
+            <div class="table-wrapper">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Account Details</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php 
+                    $withdrawals->execute();
+                    while($row = $withdrawals->fetch(PDO::FETCH_ASSOC)): 
+                        if ($row['status'] != 'pending') continue;
+                        $user = getUser($row['user_id']);
+                    ?>
+                        <tr>
+                            <td><?php echo $row['id']; ?></td>
+                            <td><?php echo $user ? $user['username'] : 'Unknown'; ?></td>
+                            <td><strong>$<?php echo number_format($row['amount'], 2); ?></strong></td>
+                            <td><?php echo htmlspecialchars($row['method']); ?></td>
+                            <td><?php echo htmlspecialchars($row['account_details']); ?></td>
+                            <td><span class="badge bg-warning text-dark"><?php echo $row['status']; ?></span></td>
+                            <td>
                                 <a href="?confirm_withdrawal=<?php echo $row['id']; ?>" class="btn btn-success btn-sm" onclick="return confirm('Confirm this withdrawal?')">
                                     <i class="fas fa-check"></i> Confirm
                                 </a>
-                            <?php else: ?>
-                                <span class="badge bg-success">✅ Done</span>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endwhile; ?>
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('#adminTabs .tab-btn');
+    const tabContents = document.querySelectorAll('.admin-tab-content');
+    
+    tabButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            tabButtons.forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            tabContents.forEach(function(content) {
+                content.classList.remove('active');
+            });
+            
+            button.classList.add('active');
+            const tabId = button.getAttribute('data-tab');
+            const targetContent = document.getElementById('admin-tab-' + tabId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+        });
+    });
+});
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

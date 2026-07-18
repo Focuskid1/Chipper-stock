@@ -38,9 +38,19 @@ $stmt->execute([$user['id']]);
 $pending_deposits = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get confirmed deposits for this user
-$stmt = $db->prepare("SELECT * FROM deposits WHERE user_id = ? AND status = 'confirmed' ORDER BY created_at DESC LIMIT 5");
+$stmt = $db->prepare("SELECT * FROM deposits WHERE user_id = ? AND status = 'confirmed' ORDER BY created_at DESC LIMIT 50");
 $stmt->execute([$user['id']]);
 $confirmed_deposits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get pending withdrawals
+$stmt = $db->prepare("SELECT * FROM withdrawals WHERE user_id = ? AND status = 'pending' ORDER BY created_at DESC");
+$stmt->execute([$user['id']]);
+$pending_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get confirmed withdrawals
+$stmt = $db->prepare("SELECT * FROM withdrawals WHERE user_id = ? AND status = 'confirmed' ORDER BY created_at DESC LIMIT 50");
+$stmt->execute([$user['id']]);
+$confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html>
@@ -161,6 +171,79 @@ $confirmed_deposits = $stmt->fetchAll(PDO::FETCH_ASSOC);
         background: #e8f5e9;
         color: #198754;
     }
+    
+    /* ─── CLASSY TABS ─── */
+    .classy-tabs {
+        border-bottom: 2px solid #e9edf2;
+        margin-bottom: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .classy-tabs .tab-btn {
+        padding: 10px 20px;
+        border: none;
+        background: transparent;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #6b7a93;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border-radius: 8px 8px 0 0;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .classy-tabs .tab-btn:hover {
+        color: #0d1a2b;
+        background: #f8faff;
+    }
+    .classy-tabs .tab-btn.active {
+        color: #0d6efd;
+        border-bottom-color: #0d6efd;
+        background: #f8faff;
+    }
+    .classy-tabs .tab-btn .badge-count {
+        background: #e8f4fd;
+        color: #0d6efd;
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 30px;
+        font-weight: 600;
+    }
+    .classy-tabs .tab-btn.active .badge-count {
+        background: #0d6efd;
+        color: #fff;
+    }
+    .classy-tabs .tab-btn .tab-icon {
+        font-size: 1rem;
+    }
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #6b7a93;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        color: #dce3ec;
+        margin-bottom: 12px;
+    }
+    .empty-state h5 {
+        color: #3a4b5e;
+    }
 </style>
 </head>
 <body>
@@ -259,112 +342,177 @@ $confirmed_deposits = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
 
-        <!-- Pending Deposits Section -->
-        <?php if (!empty($pending_deposits)): ?>
-        <div class="row mt-3">
+        <!-- ============================================================ -->
+        <!-- CLASSY TABS – Recent Activities -->
+        <!-- ============================================================ -->
+        <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <i class="fas fa-clock text-warning"></i> Pending Deposits
-                        <span class="badge bg-warning text-dark ms-2"><?php echo count($pending_deposits); ?></span>
+                        <i class="fas fa-history"></i> Recent Activities
                     </div>
                     <div class="card-body">
-                        <?php foreach($pending_deposits as $deposit): ?>
-                            <div class="deposit-card pending">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                    <div>
-                                        <strong>$<?php echo number_format($deposit['amount'], 2); ?></strong>
-                                        <span class="method-badge <?php echo ($deposit['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
-                                            <i class="fas <?php echo ($deposit['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
-                                            <?php echo $deposit['method']; ?>
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span class="badge bg-warning text-dark">Pending</span>
-                                        <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($deposit['created_at'])); ?></small>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-user"></i> <?php echo htmlspecialchars($deposit['depositor_name']); ?> 
-                                        | <i class="fas fa-phone"></i> <?php echo htmlspecialchars($deposit['depositor_phone']); ?>
-                                        <?php if ($deposit['method'] == 'ETH Transfer'): ?>
-                                            | <i class="fas fa-link"></i> <span class="text-truncate d-inline-block" style="max-width: 200px;"><?php echo htmlspecialchars($deposit['transaction_ref']); ?></span>
-                                        <?php else: ?>
-                                            | <i class="fas fa-receipt"></i> <?php echo htmlspecialchars($deposit['transaction_ref']); ?>
-                                        <?php endif; ?>
-                                    </small>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
+                        <!-- Tab Buttons -->
+                        <div class="classy-tabs" id="activityTabs">
+                            <button class="tab-btn active" data-tab="pending-deposits">
+                                <i class="fas fa-clock tab-icon"></i> Pending Deposits
+                                <span class="badge-count"><?php echo count($pending_deposits); ?></span>
+                            </button>
+                            <button class="tab-btn" data-tab="confirmed-deposits">
+                                <i class="fas fa-check-circle tab-icon text-success"></i> Confirmed Deposits
+                                <span class="badge-count"><?php echo count($confirmed_deposits); ?></span>
+                            </button>
+                            <button class="tab-btn" data-tab="pending-withdrawals">
+                                <i class="fas fa-clock tab-icon text-warning"></i> Pending Withdrawals
+                                <span class="badge-count"><?php echo count($pending_withdrawals); ?></span>
+                            </button>
+                            <button class="tab-btn" data-tab="confirmed-withdrawals">
+                                <i class="fas fa-check-circle tab-icon text-success"></i> Confirmed Withdrawals
+                                <span class="badge-count"><?php echo count($confirmed_withdrawals); ?></span>
+                            </button>
+                        </div>
 
-        <!-- Confirmed Deposits Section -->
-        <?php if (!empty($confirmed_deposits)): ?>
-        <div class="row mt-3">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-check-circle text-success"></i> Recent Deposits
-                    </div>
-                    <div class="card-body">
-                        <?php foreach($confirmed_deposits as $deposit): ?>
-                            <div class="deposit-card confirmed">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                    <div>
-                                        <strong>$<?php echo number_format($deposit['amount'], 2); ?></strong>
-                                        <span class="method-badge <?php echo ($deposit['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
-                                            <i class="fas <?php echo ($deposit['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
-                                            <?php echo $deposit['method']; ?>
-                                        </span>
+                        <!-- Tab Content: Pending Deposits -->
+                        <div class="tab-content active" id="tab-pending-deposits">
+                            <?php if (!empty($pending_deposits)): ?>
+                                <?php foreach($pending_deposits as $deposit): ?>
+                                    <div class="deposit-card pending">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                            <div>
+                                                <strong>$<?php echo number_format($deposit['amount'], 2); ?></strong>
+                                                <span class="method-badge <?php echo ($deposit['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
+                                                    <i class="fas <?php echo ($deposit['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
+                                                    <?php echo $deposit['method']; ?>
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($deposit['created_at'])); ?></small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user"></i> <?php echo htmlspecialchars($deposit['depositor_name']); ?> 
+                                                | <i class="fas fa-phone"></i> <?php echo htmlspecialchars($deposit['depositor_phone']); ?>
+                                                <?php if ($deposit['method'] == 'ETH Transfer'): ?>
+                                                    | <i class="fas fa-link"></i> <span class="text-truncate d-inline-block" style="max-width: 200px;"><?php echo htmlspecialchars($deposit['transaction_ref']); ?></span>
+                                                <?php else: ?>
+                                                    | <i class="fas fa-receipt"></i> <?php echo htmlspecialchars($deposit['transaction_ref']); ?>
+                                                <?php endif; ?>
+                                            </small>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <span class="badge bg-success">Confirmed</span>
-                                        <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($deposit['created_at'])); ?></small>
-                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="empty-state">
+                                    <i class="fas fa-inbox"></i>
+                                    <h5>No pending deposits</h5>
+                                    <p class="text-muted">You don't have any pending deposits at the moment.</p>
                                 </div>
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-user"></i> <?php echo htmlspecialchars($deposit['depositor_name']); ?>
-                                        <?php if ($deposit['method'] == 'ETH Transfer'): ?>
-                                            | <i class="fas fa-link"></i> <span class="text-truncate d-inline-block" style="max-width: 200px;"><?php echo htmlspecialchars($deposit['transaction_ref']); ?></span>
-                                        <?php endif; ?>
-                                    </small>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
 
-        <div class="row mt-3">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">📋 Recent Activity</div>
-                    <div class="card-body">
-                        <div class="table-wrapper">
-                            <table class="table table-striped">
-                                <thead><tr><th>Description</th><th>Amount</th></tr></thead>
-                                <tbody>
-                                <?php
-                                $stmt = $db->prepare("SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 10");
-                                $stmt->execute([$user['id']]);
-                                while($row = $stmt->fetch(PDO::FETCH_ASSOC)): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($row['description']); ?></td>
-                                        <td class="<?php echo ($row['type'] == 'credit' || $row['type'] == 'profit' || $row['type'] == 'referral_bonus_credit') ? 'text-success' : 'text-danger'; ?>">
-                                            <?php if ($row['type'] == 'credit' || $row['type'] == 'profit' || $row['type'] == 'referral_bonus_credit'): ?>+<?php else: ?>-<?php endif; ?>$<?php echo number_format($row['amount'], 2); ?>
-                                        </td>
-                                    </tr>
-                                <?php endwhile; ?>
-                                </tbody>
-                            </table>
+                        <!-- Tab Content: Confirmed Deposits -->
+                        <div class="tab-content" id="tab-confirmed-deposits">
+                            <?php if (!empty($confirmed_deposits)): ?>
+                                <?php foreach($confirmed_deposits as $deposit): ?>
+                                    <div class="deposit-card confirmed">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                            <div>
+                                                <strong>$<?php echo number_format($deposit['amount'], 2); ?></strong>
+                                                <span class="method-badge <?php echo ($deposit['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
+                                                    <i class="fas <?php echo ($deposit['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
+                                                    <?php echo $deposit['method']; ?>
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-success">Confirmed</span>
+                                                <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($deposit['created_at'])); ?></small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user"></i> <?php echo htmlspecialchars($deposit['depositor_name']); ?>
+                                                <?php if ($deposit['method'] == 'ETH Transfer'): ?>
+                                                    | <i class="fas fa-link"></i> <span class="text-truncate d-inline-block" style="max-width: 200px;"><?php echo htmlspecialchars($deposit['transaction_ref']); ?></span>
+                                                <?php endif; ?>
+                                            </small>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="empty-state">
+                                    <i class="fas fa-check-circle"></i>
+                                    <h5>No confirmed deposits</h5>
+                                    <p class="text-muted">You haven't made any deposits yet.</p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Tab Content: Pending Withdrawals -->
+                        <div class="tab-content" id="tab-pending-withdrawals">
+                            <?php if (!empty($pending_withdrawals)): ?>
+                                <?php foreach($pending_withdrawals as $withdrawal): ?>
+                                    <div class="deposit-card pending">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                            <div>
+                                                <strong>$<?php echo number_format($withdrawal['amount'], 2); ?></strong>
+                                                <span class="method-badge bank">
+                                                    <i class="fas fa-university"></i> <?php echo htmlspecialchars($withdrawal['method']); ?>
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($withdrawal['created_at'])); ?></small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user"></i> <?php echo htmlspecialchars($withdrawal['account_details']); ?>
+                                            </small>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="empty-state">
+                                    <i class="fas fa-inbox"></i>
+                                    <h5>No pending withdrawals</h5>
+                                    <p class="text-muted">You don't have any pending withdrawal requests.</p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Tab Content: Confirmed Withdrawals -->
+                        <div class="tab-content" id="tab-confirmed-withdrawals">
+                            <?php if (!empty($confirmed_withdrawals)): ?>
+                                <?php foreach($confirmed_withdrawals as $withdrawal): ?>
+                                    <div class="deposit-card confirmed">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                            <div>
+                                                <strong>$<?php echo number_format($withdrawal['amount'], 2); ?></strong>
+                                                <span class="method-badge bank">
+                                                    <i class="fas fa-university"></i> <?php echo htmlspecialchars($withdrawal['method']); ?>
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-success">Confirmed</span>
+                                                <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($withdrawal['created_at'])); ?></small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-user"></i> <?php echo htmlspecialchars($withdrawal['account_details']); ?>
+                                            </small>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="empty-state">
+                                    <i class="fas fa-check-circle"></i>
+                                    <h5>No confirmed withdrawals</h5>
+                                    <p class="text-muted">You haven't made any withdrawals yet.</p>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -379,6 +527,37 @@ $confirmed_deposits = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </footer>
 
+    <script>
+    // Tab switching function
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                tabButtons.forEach(function(btn) {
+                    btn.classList.remove('active');
+                });
+                
+                // Remove active class from all contents
+                tabContents.forEach(function(content) {
+                    content.classList.remove('active');
+                });
+                
+                // Add active class to clicked button
+                button.classList.add('active');
+                
+                // Show corresponding content
+                const tabId = button.getAttribute('data-tab');
+                const targetContent = document.getElementById('tab-' + tabId);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+            });
+        });
+    });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
