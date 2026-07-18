@@ -20,7 +20,6 @@ $ref_count = getReferralCount($user['id']);
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <!-- Added gap-2 and flex-wrap to add spacing between buttons -->
                 <ul class="navbar-nav ms-auto d-flex flex-wrap gap-2">
                     <li class="nav-item"><span class="text-white me-2">👋 <?php echo $user['username']; ?></span></li>
                     <li class="nav-item"><a href="deposit.php" class="btn btn-success btn-sm">➕ Deposit</a></li>
@@ -32,7 +31,6 @@ $ref_count = getReferralCount($user['id']);
     </nav>
 
     <div class="container-fluid mt-4">
-        <!-- Investment Summary -->
         <div class="alert alert-info" role="alert">
             <strong>💡 Your AI trading account is active.</strong> Daily returns are credited automatically every 24 hours.
         </div>
@@ -68,7 +66,6 @@ $ref_count = getReferralCount($user['id']);
             </div>
         </div>
 
-        <!-- Recent Transactions -->
         <div class="row mt-3">
             <div class="col-12">
                 <div class="card">
@@ -80,11 +77,10 @@ $ref_count = getReferralCount($user['id']);
                                 <tbody>
                                 <?php
                                 $stmt = $db->prepare("SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 10");
-                                $stmt->bindValue(1, $user['id'], SQLITE3_INTEGER);
-                                $result = $stmt->execute();
-                                while($row = $result->fetchArray(SQLITE3_ASSOC)): ?>
+                                $stmt->execute([$user['id']]);
+                                while($row = $stmt->fetch(PDO::FETCH_ASSOC)): ?>
                                     <tr>
-                                        <td><?php echo $row['description']; ?></td>
+                                        <td><?php echo htmlspecialchars($row['description']); ?></td>
                                         <td class="<?php echo ($row['type'] == 'credit') ? 'text-success' : 'text-danger'; ?>">
                                             <?php echo ($row['type'] == 'credit') ? '+' : '-'; ?>$<?php echo number_format($row['amount'], 2); ?>
                                         </td>
