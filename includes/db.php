@@ -1,15 +1,32 @@
 <?php
-// Detect environment: use DATABASE_URL if set (Render), otherwise fallback to SQLite (local)
 $db_url = getenv('DATABASE_URL');
 
 if ($db_url) {
-    // --- PostgreSQL (Render) ---
+    // Parse the PostgreSQL URL (postgres://user:pass@host:port/db)
+    $parsed = parse_url($db_url);
+
+    if ($parsed === false) {
+        die("Invalid DATABASE_URL format.");
+    }
+
+    $host = $parsed['host'];
+    $port = $parsed['port'] ?? '5432';
+    $dbname = ltrim($parsed['path'] ?? '', '/');
+    $user = $parsed['user'] ?? '';
+    $pass = $parsed['pass'] ?? '';
+
+    if (empty($dbname) || empty($user)) {
+        die("Missing database name or user in DATABASE_URL.");
+    }
+
+    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;user=$user;password=$pass";
+
     try {
-        $db = new PDO($db_url);
+        $db = new PDO($dsn);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-        // Create all tables (PostgreSQL syntax)
+        // Create tables (PostgreSQL syntax)
         $db->exec("CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
@@ -66,24 +83,23 @@ if ($db_url) {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 
-        // Indexes for performance
+        // Indexes
         $db->exec("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)");
         $db->exec("CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)");
         $db->exec("CREATE INDEX IF NOT EXISTS idx_deposits_user_id ON deposits(user_id)");
         $db->exec("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)");
 
     } catch (PDOException $e) {
-        // Show the real error message (for debugging – remove later!)
-        die("PostgreSQL connection error: " . $e->getMessage());
+        die("Database connection failed: " . $e->getMessage());
     }
 } else {
-    // --- SQLite (local development) ---
+    // --- SQLite fallback for local development ---
     try {
         $db = new PDO('sqlite:' . __DIR__ . '/../database.db');
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-        // Create all tables (SQLite syntax)
+        // SQLite tables (same schema, different syntax)
         $db->exec("CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -140,16 +156,16 @@ if ($db_url) {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )");
 
-        // Indexes (SQLite – ignore errors if they already exist)
+        // Indexes
         @$db->exec("CREATE INDEX idx_users_username ON users(username)");
         @$db->exec("CREATE INDEX idx_users_referral_code ON users(referral_code)");
         @$db->exec("CREATE INDEX idx_deposits_user_id ON deposits(user_id)");
         @$db->exec("CREATE INDEX idx_transactions_user_id ON transactions(user_id)");
 
     } catch (PDOException $e) {
-        die("SQLite connection error: " . $e->getMessage());
+        die("SQLite connection failed: " . $e->getMessage());
     }
 }
 
-// Make $db available globally
+// Make $db globally accessible
 ?>
