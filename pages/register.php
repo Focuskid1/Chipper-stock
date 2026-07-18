@@ -1,9 +1,19 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/functions.php';  // Explicitly require functions
+require_once __DIR__ . '/../includes/functions.php';
 
 if (isLoggedIn()) redirect('/pages/dashboard.php');
+
+// Get referral ID from URL (ref parameter)
 $ref = isset($_GET['ref']) ? intval($_GET['ref']) : 0;
+
+// Validate referral ID exists
+if ($ref > 0) {
+    $referrer = getUser($ref);
+    if (!$referrer) {
+        $ref = 0; // Invalid referrer, ignore
+    }
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -11,6 +21,7 @@ $ref = isset($_GET['ref']) ? intval($_GET['ref']) : 0;
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body class="d-flex align-items-center justify-content-center" style="min-height:100vh; background:#f4f7fc; padding:1.5rem 0;">
@@ -19,6 +30,11 @@ $ref = isset($_GET['ref']) ? intval($_GET['ref']) : 0;
             <div class="text-center mb-4">
                 <h2 class="fw-bold" style="color:#0d1a2b;"><?php echo SITE_NAME; ?></h2>
                 <p class="text-muted">Create your investment account</p>
+                <?php if ($ref > 0): ?>
+                    <div class="alert alert-info">
+                        <i class="fas fa-user-plus"></i> You were referred by a friend!
+                    </div>
+                <?php endif; ?>
             </div>
             <?php displayFlash('error'); displayFlash('success'); ?>
             <form method="POST" action="/includes/auth.php">

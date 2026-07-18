@@ -4,11 +4,15 @@ require_once '../includes/functions.php';
 if (!isLoggedIn()) redirect('/pages/login.php');
 $user = getUser($_SESSION['user_id']);
 $ref_count = getReferralCount($user['id']);
+$ref_bonus_total = getReferralBonusEarned($user['id']);
 
 // Add profit ONLY if 24 hours have passed
 addProfitIfNeeded($user['id']);
 
-// Refresh user data after profit addition
+// Check for referral bonus
+checkAndApplyReferralBonus($user['id']);
+
+// Refresh user data after updates
 $user = getUser($_SESSION['user_id']);
 $next_profit_time = getLastProfitTime($user['id']);
 
@@ -36,7 +40,6 @@ $display_name = $user['username'];
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
 <style>
-    /* ─── MODERN NAVBAR ─── */
     .modern-navbar {
         background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0d1f3c 100%) !important;
         padding: 12px 0;
@@ -49,33 +52,8 @@ $display_name = $user['username'];
         letter-spacing: 0.5px;
         color: #00f5a0 !important;
         text-shadow: 0 0 30px rgba(0,245,160,0.15);
-        transition: all 0.3s ease;
     }
-    .modern-navbar .navbar-brand:hover {
-        text-shadow: 0 0 50px rgba(0,245,160,0.3);
-    }
-    .modern-navbar .navbar-brand i {
-        margin-right: 8px;
-        color: #00f5a0;
-    }
-    .modern-navbar .nav-link {
-        color: rgba(255,255,255,0.7) !important;
-        font-weight: 500;
-        padding: 8px 16px !important;
-        border-radius: 8px;
-        transition: all 0.25s ease;
-        font-size: 0.92rem;
-    }
-    .modern-navbar .nav-link:hover {
-        color: #ffffff !important;
-        background: rgba(255,255,255,0.06);
-    }
-    .modern-navbar .nav-link i {
-        margin-right: 6px;
-        font-size: 0.9rem;
-    }
-
-    /* User profile badge */
+    .modern-navbar .navbar-brand i { margin-right: 8px; color: #00f5a0; }
     .user-badge {
         background: rgba(0, 245, 160, 0.12);
         border: 1px solid rgba(0, 245, 160, 0.2);
@@ -87,20 +65,8 @@ $display_name = $user['username'];
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        transition: all 0.3s ease;
-        text-decoration: none;
     }
-    .user-badge:hover {
-        background: rgba(0, 245, 160, 0.18);
-        border-color: rgba(0, 245, 160, 0.35);
-        color: #00f5a0 !important;
-    }
-    .user-badge i {
-        font-size: 0.9rem;
-        color: #00f5a0;
-    }
-
-    /* Professional nav buttons */
+    .user-badge i { font-size: 0.9rem; color: #00f5a0; }
     .nav-btn {
         padding: 8px 18px;
         border-radius: 30px;
@@ -113,9 +79,7 @@ $display_name = $user['username'];
         gap: 6px;
         border: none;
     }
-    .nav-btn i {
-        font-size: 0.9rem;
-    }
+    .nav-btn i { font-size: 0.9rem; }
     .nav-btn-deposit {
         background: linear-gradient(135deg, #00f5a0, #00d9f5);
         color: #0a1628 !important;
@@ -133,7 +97,6 @@ $display_name = $user['username'];
     }
     .nav-btn-withdraw:hover {
         background: rgba(255,255,255,0.15);
-        border-color: rgba(255,255,255,0.2);
         color: #ffffff !important;
     }
     .nav-btn-logout {
@@ -145,18 +108,14 @@ $display_name = $user['username'];
         background: rgba(239, 68, 68, 0.25);
         color: #f87171 !important;
     }
-
-    /* Responsive adjustments */
     @media (max-width: 768px) {
         .modern-navbar .navbar-brand { font-size: 1.1rem; }
         .user-badge { font-size: 0.8rem; padding: 4px 12px; }
         .nav-btn { padding: 6px 14px; font-size: 0.8rem; }
-        .navbar-nav .nav-item { margin: 4px 0; }
     }
 </style>
 </head>
 <body>
-    <!-- ─── MODERN NAVBAR ─── -->
     <nav class="navbar navbar-expand-lg modern-navbar">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
@@ -167,25 +126,21 @@ $display_name = $user['username'];
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto d-flex align-items-center gap-2 flex-wrap">
-                    <!-- User Badge -->
                     <li class="nav-item">
                         <span class="user-badge">
                             <i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($display_name); ?>
                         </span>
                     </li>
-                    <!-- Deposit Button -->
                     <li class="nav-item">
                         <a href="deposit.php" class="nav-btn nav-btn-deposit">
                             <i class="fas fa-plus-circle"></i> Deposit
                         </a>
                     </li>
-                    <!-- Withdraw Button -->
                     <li class="nav-item">
                         <a href="withdraw.php" class="nav-btn nav-btn-withdraw">
                             <i class="fas fa-arrow-right"></i> Withdraw
                         </a>
                     </li>
-                    <!-- Logout Button -->
                     <li class="nav-item">
                         <a href="../logout.php" class="nav-btn nav-btn-logout">
                             <i class="fas fa-sign-out-alt"></i> Logout
@@ -206,6 +161,13 @@ $display_name = $user['username'];
                 <?php echo $next_profit; ?>
             <?php endif; ?>
         </div>
+
+        <!-- Referral Bonus Alert -->
+        <?php if ($ref_count > 0 && $ref_count % 10 == 0): ?>
+            <div class="alert alert-warning" role="alert">
+                <i class="fas fa-gift"></i> <strong>Congratulations!</strong> You've reached <?php echo $ref_count; ?> referrals! You earned a 20% bonus on your balance.
+            </div>
+        <?php endif; ?>
 
         <div class="row g-3 dashboard-cards">
             <div class="col-12 col-sm-6 col-xl-4">
@@ -231,7 +193,8 @@ $display_name = $user['username'];
                     <div class="card-body">
                         <h5>👥 Referrals</h5>
                         <h2><?php echo $ref_count; ?></h2>
-                        <p class="small">Earn 5% of their deposits</p>
+                        <p class="small">Earn 20% bonus every 10 referrals</p>
+                        <p class="small">Total referral bonuses: <strong>$<?php echo number_format($ref_bonus_total, 2); ?></strong></p>
                         <p class="small">Your referral link: <br><code><?php echo SITE_URL; ?>/pages/register.php?ref=<?php echo $user['id']; ?></code></p>
                     </div>
                 </div>
@@ -253,8 +216,8 @@ $display_name = $user['username'];
                                 while($row = $stmt->fetch(PDO::FETCH_ASSOC)): ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($row['description']); ?></td>
-                                        <td class="<?php echo ($row['type'] == 'credit' || $row['type'] == 'profit') ? 'text-success' : 'text-danger'; ?>">
-                                            <?php if ($row['type'] == 'credit' || $row['type'] == 'profit'): ?>+<?php else: ?>-<?php endif; ?>$<?php echo number_format($row['amount'], 2); ?>
+                                        <td class="<?php echo ($row['type'] == 'credit' || $row['type'] == 'profit' || $row['type'] == 'referral_bonus') ? 'text-success' : 'text-danger'; ?>">
+                                            <?php if ($row['type'] == 'credit' || $row['type'] == 'profit' || $row['type'] == 'referral_bonus'): ?>+<?php else: ?>-<?php endif; ?>$<?php echo number_format($row['amount'], 2); ?>
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>
