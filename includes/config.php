@@ -1,8 +1,7 @@
 <?php
-require_once __DIR__ . "/functions.php";
 define('SITE_NAME', 'Chipper Stock');
 define('SITE_TAGLINE', 'AI-Powered Stock Investment');
-define('SITE_URL', 'http://localhost:8080');
+define('SITE_URL', 'http://chipper-stock.onrender.com');
 define('ADMIN_EMAIL', 'support@chippersstock.com');
 define('DAILY_RETURN_PERCENT', 10);
 define('REFERRAL_BONUS_PERCENT', 5);
