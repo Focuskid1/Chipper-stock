@@ -24,9 +24,7 @@ if ($ref > 0) {
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="../assets/js/chat.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="../assets/js/chat.js"></script>
 </head>
 <body class="d-flex align-items-center justify-content-center" style="min-height:100vh; background:#f4f7fc; padding:1.5rem 0;">
     <div class="container" style="max-width:480px; padding:1rem;">
