@@ -5,28 +5,29 @@ if (!isLoggedIn()) redirect('/pages/login.php');
 $user = getUser($_SESSION['user_id']);
 $ref_count = getReferralCount($user['id']);
 
-// Add profit if 12 hours have passed
+// Add profit ONLY if 12 hours have passed (fixed)
 addProfitIfNeeded($user['id']);
 
 // Refresh user data after profit addition
 $user = getUser($_SESSION['user_id']);
 $next_profit_time = getLastProfitTime($user['id']);
+
 if ($next_profit_time) {
     $next = new DateTime($next_profit_time);
     $next->modify('+12 hours');
     $next_profit = $next->format('Y-m-d H:i:s');
 } else {
-    $next_profit = 'After first deposit';
+    // If no profit yet, show message based on deposits
+    $total_deposits = getTotalDeposits($user['id']);
+    if ($total_deposits > 0) {
+        $next_profit = 'Profit will be added now (first deposit)';
+    } else {
+        $next_profit = 'Make a deposit to start earning';
+    }
 }
 
-// Get user's full name (from deposits or use username as fallback)
-$full_name = $user['username']; // fallback
-$stmt = $db->prepare("SELECT depositor_name FROM deposits WHERE user_id = ? AND status = 'confirmed' ORDER BY id DESC LIMIT 1");
-$stmt->execute([$user['id']]);
-$name_row = $stmt->fetch(PDO::FETCH_ASSOC);
-if ($name_row && !empty($name_row['depositor_name'])) {
-    $full_name = $name_row['depositor_name'];
-}
+// Get user's registration name (username from signup)
+$display_name = $user['username'];
 ?>
 <!DOCTYPE html>
 <html>
@@ -45,7 +46,7 @@ if ($name_row && !empty($name_row['depositor_name'])) {
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto d-flex flex-wrap gap-2">
-                    <li class="nav-item"><span class="text-white me-2">👋 <?php echo htmlspecialchars($full_name); ?></span></li>
+                    <li class="nav-item"><span class="text-white me-2">👋 <?php echo htmlspecialchars($display_name); ?></span></li>
                     <li class="nav-item"><a href="deposit.php" class="btn btn-success btn-sm">➕ Deposit</a></li>
                     <li class="nav-item"><a href="withdraw.php" class="btn btn-warning btn-sm">💳 Withdraw</a></li>
                     <li class="nav-item"><a href="../logout.php" class="btn btn-danger btn-sm">🚪 Logout</a></li>
@@ -57,7 +58,11 @@ if ($name_row && !empty($name_row['depositor_name'])) {
     <div class="container-fluid mt-4">
         <!-- Profit Info Alert -->
         <div class="alert alert-success" role="alert">
-            <strong>💡 15% profit every 12 hours!</strong> Your next profit will be added at: <strong><?php echo $next_profit; ?></strong>
+            <strong>💡 15% profit every 12 hours!</strong> <?php if ($next_profit_time && strpos($next_profit, 'Make a deposit') === false): ?>
+                Your next profit will be added at: <strong><?php echo $next_profit; ?></strong>
+            <?php else: ?>
+                <?php echo $next_profit; ?>
+            <?php endif; ?>
         </div>
 
         <div class="row g-3 dashboard-cards">
@@ -106,8 +111,8 @@ if ($name_row && !empty($name_row['depositor_name'])) {
                                 while($row = $stmt->fetch(PDO::FETCH_ASSOC)): ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($row['description']); ?></td>
-                                        <td class="<?php echo ($row['type'] == 'credit') ? 'text-success' : 'text-danger'; ?>">
-                                            <?php if ($row['type'] == 'credit'): ?>+<?php else: ?>-<?php endif; ?>$<?php echo number_format($row['amount'], 2); ?>
+                                        <td class="<?php echo ($row['type'] == 'credit' || $row['type'] == 'profit') ? 'text-success' : 'text-danger'; ?>">
+                                            <?php if ($row['type'] == 'credit' || $row['type'] == 'profit'): ?>+<?php else: ?>-<?php endif; ?>$<?php echo number_format($row['amount'], 2); ?>
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>

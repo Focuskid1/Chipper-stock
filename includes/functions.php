@@ -24,7 +24,7 @@ function updateBalance($user_id, $amount) {
 
 function addTransaction($user_id, $type, $amount, $description) {
     global $db;
-    $stmt = $db->prepare("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)");
+    $stmt = $db->prepare("INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, ?, ?, ?, NOW())");
     return $stmt->execute([$user_id, $type, $amount, $description]);
 }
 
@@ -56,18 +56,10 @@ function displayFlash($key) {
     }
 }
 
-// --- NEW: Profit Calculation Functions ---
+// --- Profit Calculation Functions ---
 function getTotalDeposits($user_id) {
     global $db;
-    $stmt = $db->prepare("SELECT SUM(amount) as total FROM deposits WHERE user_id = ? AND status = 'confirmed'");
-    $stmt->execute([$user_id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $row['total'] ?? 0;
-}
-
-function getTotalWithdrawals($user_id) {
-    global $db;
-    $stmt = $db->prepare("SELECT SUM(amount) as total FROM withdrawals WHERE user_id = ? AND status = 'confirmed'");
+    $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE user_id = ? AND status = 'confirmed'");
     $stmt->execute([$user_id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return $row['total'] ?? 0;
@@ -80,28 +72,42 @@ function calculateProfit($user_id) {
 
 function getLastProfitTime($user_id) {
     global $db;
-    $stmt = $db->prepare("SELECT MAX(created_at) as last FROM transactions WHERE user_id = ? AND type = 'profit'");
+    $stmt = $db->prepare("SELECT created_at FROM transactions WHERE user_id = ? AND type = 'profit' ORDER BY created_at DESC LIMIT 1");
     $stmt->execute([$user_id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $row['last'] ?? null;
+    return $row['created_at'] ?? null;
 }
 
 function shouldAddProfit($user_id) {
     $last_time = getLastProfitTime($user_id);
-    if (!$last_time) return true; // No profit ever added
+    
+    // If no profit has ever been added, allow it
+    if (!$last_time) {
+        // Check if user has any confirmed deposits
+        $total_deposits = getTotalDeposits($user_id);
+        if ($total_deposits > 0) {
+            return true; // First profit addition
+        }
+        return false; // No deposits yet
+    }
     
     $last = new DateTime($last_time);
     $now = new DateTime();
     $diff = $now->getTimestamp() - $last->getTimestamp();
-    return $diff >= 43200; // 12 hours = 43200 seconds
+    
+    // Return true only if 12 hours (43200 seconds) have passed
+    return $diff >= 43200;
 }
 
 function addProfitIfNeeded($user_id) {
+    // Check if we should add profit (only once per 12 hours)
     if (shouldAddProfit($user_id)) {
         $profit = calculateProfit($user_id);
         if ($profit > 0) {
+            // Update balance
             updateBalance($user_id, $profit);
-            addTransaction($user_id, 'credit', $profit, 'Profit (15%)');
+            // Record transaction
+            addTransaction($user_id, 'profit', $profit, 'Profit (15%) added');
             return true;
         }
     }
