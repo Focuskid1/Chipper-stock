@@ -17,7 +17,6 @@ if ($next_profit_time) {
     $next->modify('+24 hours');
     $next_profit = $next->format('Y-m-d H:i:s');
 } else {
-    // If no profit yet, show message based on deposits
     $total_deposits = getTotalDeposits($user['id']);
     if ($total_deposits > 0) {
         $next_profit = 'Profit will be added now (first deposit)';
@@ -26,7 +25,6 @@ if ($next_profit_time) {
     }
 }
 
-// Get user's username (registration name)
 $display_name = $user['username'];
 ?>
 <!DOCTYPE html>
@@ -35,35 +33,164 @@ $display_name = $user['username'];
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
 <style>
-    .username-display {
-        color: #006400 !important;  /* Dark green */
+    /* ─── MODERN NAVBAR ─── */
+    .modern-navbar {
+        background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0d1f3c 100%) !important;
+        padding: 12px 0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .modern-navbar .navbar-brand {
         font-weight: 700;
-        font-size: 1.1rem;
-        background: rgba(0, 100, 0, 0.08);
-        padding: 4px 12px;
+        font-size: 1.4rem;
+        letter-spacing: 0.5px;
+        color: #00f5a0 !important;
+        text-shadow: 0 0 30px rgba(0,245,160,0.15);
+        transition: all 0.3s ease;
+    }
+    .modern-navbar .navbar-brand:hover {
+        text-shadow: 0 0 50px rgba(0,245,160,0.3);
+    }
+    .modern-navbar .navbar-brand i {
+        margin-right: 8px;
+        color: #00f5a0;
+    }
+    .modern-navbar .nav-link {
+        color: rgba(255,255,255,0.7) !important;
+        font-weight: 500;
+        padding: 8px 16px !important;
+        border-radius: 8px;
+        transition: all 0.25s ease;
+        font-size: 0.92rem;
+    }
+    .modern-navbar .nav-link:hover {
+        color: #ffffff !important;
+        background: rgba(255,255,255,0.06);
+    }
+    .modern-navbar .nav-link i {
+        margin-right: 6px;
+        font-size: 0.9rem;
+    }
+
+    /* User profile badge */
+    .user-badge {
+        background: rgba(0, 245, 160, 0.12);
+        border: 1px solid rgba(0, 245, 160, 0.2);
+        color: #00f5a0 !important;
+        padding: 6px 16px;
         border-radius: 30px;
-        border: 1px solid rgba(0, 100, 0, 0.15);
-        display: inline-block;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    .user-badge:hover {
+        background: rgba(0, 245, 160, 0.18);
+        border-color: rgba(0, 245, 160, 0.35);
+        color: #00f5a0 !important;
+    }
+    .user-badge i {
+        font-size: 0.9rem;
+        color: #00f5a0;
+    }
+
+    /* Professional nav buttons */
+    .nav-btn {
+        padding: 8px 18px;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.25s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: none;
+    }
+    .nav-btn i {
+        font-size: 0.9rem;
+    }
+    .nav-btn-deposit {
+        background: linear-gradient(135deg, #00f5a0, #00d9f5);
+        color: #0a1628 !important;
+        box-shadow: 0 4px 15px rgba(0,245,160,0.25);
+    }
+    .nav-btn-deposit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,245,160,0.35);
+        color: #0a1628 !important;
+    }
+    .nav-btn-withdraw {
+        background: rgba(255,255,255,0.08);
+        color: #ffffff !important;
+        border: 1px solid rgba(255,255,255,0.12);
+    }
+    .nav-btn-withdraw:hover {
+        background: rgba(255,255,255,0.15);
+        border-color: rgba(255,255,255,0.2);
+        color: #ffffff !important;
+    }
+    .nav-btn-logout {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171 !important;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    .nav-btn-logout:hover {
+        background: rgba(239, 68, 68, 0.25);
+        color: #f87171 !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .modern-navbar .navbar-brand { font-size: 1.1rem; }
+        .user-badge { font-size: 0.8rem; padding: 4px 12px; }
+        .nav-btn { padding: 6px 14px; font-size: 0.8rem; }
+        .navbar-nav .nav-item { margin: 4px 0; }
     }
 </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-gradient">
+    <!-- ─── MODERN NAVBAR ─── -->
+    <nav class="navbar navbar-expand-lg modern-navbar">
         <div class="container-fluid">
-            <span class="navbar-brand fw-bold"><?php echo SITE_NAME; ?></span>
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line"></i><?php echo SITE_NAME; ?>
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto d-flex flex-wrap gap-2 align-items-center">
+                <ul class="navbar-nav ms-auto d-flex align-items-center gap-2 flex-wrap">
+                    <!-- User Badge -->
                     <li class="nav-item">
-                        <span class="username-display">👤 <?php echo htmlspecialchars($display_name); ?></span>
+                        <span class="user-badge">
+                            <i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($display_name); ?>
+                        </span>
                     </li>
-                    <li class="nav-item"><a href="deposit.php" class="btn btn-success btn-sm">➕ Deposit</a></li>
-                    <li class="nav-item"><a href="withdraw.php" class="btn btn-warning btn-sm">💳 Withdraw</a></li>
-                    <li class="nav-item"><a href="../logout.php" class="btn btn-danger btn-sm">🚪 Logout</a></li>
+                    <!-- Deposit Button -->
+                    <li class="nav-item">
+                        <a href="deposit.php" class="nav-btn nav-btn-deposit">
+                            <i class="fas fa-plus-circle"></i> Deposit
+                        </a>
+                    </li>
+                    <!-- Withdraw Button -->
+                    <li class="nav-item">
+                        <a href="withdraw.php" class="nav-btn nav-btn-withdraw">
+                            <i class="fas fa-arrow-right"></i> Withdraw
+                        </a>
+                    </li>
+                    <!-- Logout Button -->
+                    <li class="nav-item">
+                        <a href="../logout.php" class="nav-btn nav-btn-logout">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -72,7 +199,8 @@ $display_name = $user['username'];
     <div class="container-fluid mt-4">
         <!-- Profit Info Alert -->
         <div class="alert alert-success" role="alert">
-            <strong>💡 15% profit every 24 hours!</strong> <?php if ($next_profit_time && strpos($next_profit, 'Make a deposit') === false): ?>
+            <strong>💡 15% profit every 24 hours!</strong> 
+            <?php if ($next_profit_time && strpos($next_profit, 'Make a deposit') === false): ?>
                 Your next profit will be added at: <strong><?php echo $next_profit; ?></strong>
             <?php else: ?>
                 <?php echo $next_profit; ?>
