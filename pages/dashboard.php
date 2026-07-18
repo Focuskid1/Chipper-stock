@@ -18,6 +18,15 @@ if ($next_profit_time) {
 } else {
     $next_profit = 'After first deposit';
 }
+
+// Get user's full name (from deposits or use username as fallback)
+$full_name = $user['username']; // fallback
+$stmt = $db->prepare("SELECT depositor_name FROM deposits WHERE user_id = ? AND status = 'confirmed' ORDER BY id DESC LIMIT 1");
+$stmt->execute([$user['id']]);
+$name_row = $stmt->fetch(PDO::FETCH_ASSOC);
+if ($name_row && !empty($name_row['depositor_name'])) {
+    $full_name = $name_row['depositor_name'];
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -36,7 +45,7 @@ if ($next_profit_time) {
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto d-flex flex-wrap gap-2">
-                    <li class="nav-item"><span class="text-white me-2">👋 <?php echo $user['username']; ?></span></li>
+                    <li class="nav-item"><span class="text-white me-2">👋 <?php echo htmlspecialchars($full_name); ?></span></li>
                     <li class="nav-item"><a href="deposit.php" class="btn btn-success btn-sm">➕ Deposit</a></li>
                     <li class="nav-item"><a href="withdraw.php" class="btn btn-warning btn-sm">💳 Withdraw</a></li>
                     <li class="nav-item"><a href="../logout.php" class="btn btn-danger btn-sm">🚪 Logout</a></li>
