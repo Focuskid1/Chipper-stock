@@ -4,23 +4,22 @@ require_once 'config.php';
 
 if (isset($_POST['login'])) {
     $username = $_POST['username'];
-    $password = $_POST['password'];  // Plain text for debugging
+    $password = md5($_POST['password']);
     
     $user = getUserByUsername($username);
     
-    // DEBUG: Accept any password for admin
-    if ($user && ($user['username'] == 'admin' || $user['username'] == 'Admin')) {
+    if ($user && $user['password'] == $password) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
-        $_SESSION['is_admin'] = true;
-        redirect('/pages/dashboard.php');
-    }
-    // Normal check for other users
-    elseif ($user && $user['password'] == md5($password)) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['is_admin'] = ($user['username'] == 'admin' || $user['username'] == 'Admin');
-        redirect('/pages/dashboard.php');
+        
+        // Check if admin (case-insensitive)
+        if (strtolower($user['username']) == 'admin') {
+            $_SESSION['is_admin'] = true;
+            redirect('/pages/admin.php');
+        } else {
+            $_SESSION['is_admin'] = false;
+            redirect('/pages/dashboard.php');
+        }
     } else {
         $_SESSION['error'] = ['type' => 'danger', 'message' => 'Invalid credentials'];
         redirect('/pages/login.php');

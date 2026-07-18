@@ -1,7 +1,16 @@
 <?php
 require_once '../includes/config.php';
 require_once '../includes/functions.php';
-if (!isLoggedIn() || $_SESSION['username'] != 'admin') redirect('/pages/login.php');
+
+// Redirect if not logged in
+if (!isLoggedIn()) {
+    redirect('/pages/login.php');
+}
+
+// Redirect if not admin
+if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
+    redirect('/pages/dashboard.php');
+}
 
 // Handle deposit confirmation
 if (isset($_GET['confirm_deposit'])) {
@@ -11,18 +20,12 @@ if (isset($_GET['confirm_deposit'])) {
     $deposit = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($deposit) {
-        // Update deposit status
         $stmt = $db->prepare("UPDATE deposits SET status = 'confirmed' WHERE id = ?");
         $stmt->execute([$id]);
-        
-        // Credit user balance
         updateBalance($deposit['user_id'], $deposit['amount']);
         addTransaction($deposit['user_id'], 'credit', $deposit['amount'], 'Deposit confirmed: $' . $deposit['amount']);
-        
-        // Update user's total deposits
         $stmt = $db->prepare("UPDATE users SET total_deposits = total_deposits + ? WHERE id = ?");
         $stmt->execute([$deposit['amount'], $deposit['user_id']]);
-        
         $_SESSION['success'] = ['type' => 'success', 'message' => 'Deposit confirmed and credited to user.'];
     }
     redirect('/pages/admin.php');
@@ -36,18 +39,12 @@ if (isset($_GET['confirm_withdrawal'])) {
     $withdrawal = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($withdrawal) {
-        // Update withdrawal status
         $stmt = $db->prepare("UPDATE withdrawals SET status = 'confirmed' WHERE id = ?");
         $stmt->execute([$id]);
-        
-        // Deduct from user balance
         updateBalance($withdrawal['user_id'], -$withdrawal['amount']);
         addTransaction($withdrawal['user_id'], 'debit', $withdrawal['amount'], 'Withdrawal confirmed: $' . $withdrawal['amount']);
-        
-        // Update user's total withdrawals
         $stmt = $db->prepare("UPDATE users SET total_withdrawals = total_withdrawals + ? WHERE id = ?");
         $stmt->execute([$withdrawal['amount'], $withdrawal['user_id']]);
-        
         $_SESSION['success'] = ['type' => 'success', 'message' => 'Withdrawal confirmed and debited from user.'];
     }
     redirect('/pages/admin.php');
@@ -70,7 +67,6 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
     <h1>Admin Panel</h1>
     <?php displayFlash('success'); ?>
     
-    <!-- Users Table -->
     <div class="card shadow p-3 mb-4">
         <h3>Users</h3>
         <div class="table-wrapper">
@@ -85,7 +81,6 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
         </div>
     </div>
     
-    <!-- Pending Deposits -->
     <div class="card shadow p-3 mb-4">
         <h3>Pending Deposits</h3>
         <div class="table-wrapper">
@@ -116,7 +111,6 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
         </div>
     </div>
     
-    <!-- Pending Withdrawals -->
     <div class="card shadow p-3">
         <h3>Pending Withdrawals</h3>
         <div class="table-wrapper">
