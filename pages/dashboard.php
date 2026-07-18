@@ -4,13 +4,14 @@ require_once '../includes/functions.php';
 if (!isLoggedIn()) redirect('/pages/login.php');
 $user = getUser($_SESSION['user_id']);
 $ref_count = getReferralCount($user['id']);
-$ref_bonus_total = getReferralBonusEarned($user['id']);
+$ref_bonus_earned = getReferralBonusEarned($user['id']);
+$ref_bonus_pending = getReferralBonusPending($user['id']);
 
 // Add profit ONLY if 24 hours have passed
 addProfitIfNeeded($user['id']);
 
-// Check for referral bonus
-checkAndApplyReferralBonus($user['id']);
+// Process pending referral bonuses
+processPendingReferralBonuses($user['id']);
 
 // Refresh user data after updates
 $user = getUser($_SESSION['user_id']);
@@ -30,6 +31,16 @@ if ($next_profit_time) {
 }
 
 $display_name = $user['username'];
+
+// Get pending deposits for this user
+$stmt = $db->prepare("SELECT * FROM deposits WHERE user_id = ? AND status = 'pending' ORDER BY created_at DESC");
+$stmt->execute([$user['id']]);
+$pending_deposits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get confirmed deposits for this user
+$stmt = $db->prepare("SELECT * FROM deposits WHERE user_id = ? AND status = 'confirmed' ORDER BY created_at DESC LIMIT 5");
+$stmt->execute([$user['id']]);
+$confirmed_deposits = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html>
@@ -113,6 +124,43 @@ $display_name = $user['username'];
         .user-badge { font-size: 0.8rem; padding: 4px 12px; }
         .nav-btn { padding: 6px 14px; font-size: 0.8rem; }
     }
+    .bonus-pending { 
+        background: rgba(255, 193, 7, 0.15);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        border-radius: 12px;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        color: #856404;
+    }
+    .deposit-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+        border-left: 4px solid #0d6efd;
+        border: 1px solid #e9edf2;
+        border-left-width: 4px;
+    }
+    .deposit-card.pending {
+        border-left-color: #ffc107;
+    }
+    .deposit-card.confirmed {
+        border-left-color: #198754;
+    }
+    .deposit-card .method-badge {
+        font-size: 0.75rem;
+        padding: 2px 10px;
+        border-radius: 30px;
+        font-weight: 600;
+    }
+    .method-badge.bank {
+        background: #e8f4fd;
+        color: #0d6efd;
+    }
+    .method-badge.crypto {
+        background: #e8f5e9;
+        color: #198754;
+    }
 </style>
 </head>
 <body>
@@ -162,10 +210,17 @@ $display_name = $user['username'];
             <?php endif; ?>
         </div>
 
-        <!-- Referral Bonus Alert -->
+        <!-- Pending Bonus Alert -->
+        <?php if ($ref_bonus_pending > 0): ?>
+            <div class="alert alert-warning bonus-pending" role="alert">
+                <i class="fas fa-hourglass-half"></i> <strong>Pending Bonus!</strong> You have <strong>$<?php echo number_format($ref_bonus_pending, 2); ?></strong> in referral bonuses that will be credited to your balance in 24 hours.
+            </div>
+        <?php endif; ?>
+
+        <!-- Referral Milestone Alert -->
         <?php if ($ref_count > 0 && $ref_count % 10 == 0): ?>
-            <div class="alert alert-warning" role="alert">
-                <i class="fas fa-gift"></i> <strong>Congratulations!</strong> You've reached <?php echo $ref_count; ?> referrals! You earned a 20% bonus on your balance.
+            <div class="alert alert-info" role="alert">
+                <i class="fas fa-trophy"></i> <strong>Congratulations!</strong> You've reached <?php echo $ref_count; ?> referrals! A 20% bonus has been added to your pending bonuses and will be credited in 24 hours.
             </div>
         <?php endif; ?>
 
@@ -194,12 +249,99 @@ $display_name = $user['username'];
                         <h5>👥 Referrals</h5>
                         <h2><?php echo $ref_count; ?></h2>
                         <p class="small">Earn 20% bonus every 10 referrals</p>
-                        <p class="small">Total referral bonuses: <strong>$<?php echo number_format($ref_bonus_total, 2); ?></strong></p>
+                        <p class="small">Bonuses earned: <strong>$<?php echo number_format($ref_bonus_earned, 2); ?></strong></p>
+                        <?php if ($ref_bonus_pending > 0): ?>
+                            <p class="small text-warning">Pending bonuses: <strong>$<?php echo number_format($ref_bonus_pending, 2); ?></strong></p>
+                        <?php endif; ?>
                         <p class="small">Your referral link: <br><code><?php echo SITE_URL; ?>/pages/register.php?ref=<?php echo $user['id']; ?></code></p>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Pending Deposits Section -->
+        <?php if (!empty($pending_deposits)): ?>
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-clock text-warning"></i> Pending Deposits
+                        <span class="badge bg-warning text-dark ms-2"><?php echo count($pending_deposits); ?></span>
+                    </div>
+                    <div class="card-body">
+                        <?php foreach($pending_deposits as $deposit): ?>
+                            <div class="deposit-card pending">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                    <div>
+                                        <strong>$<?php echo number_format($deposit['amount'], 2); ?></strong>
+                                        <span class="method-badge <?php echo ($deposit['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
+                                            <i class="fas <?php echo ($deposit['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
+                                            <?php echo $deposit['method']; ?>
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($deposit['created_at'])); ?></small>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user"></i> <?php echo htmlspecialchars($deposit['depositor_name']); ?> 
+                                        | <i class="fas fa-phone"></i> <?php echo htmlspecialchars($deposit['depositor_phone']); ?>
+                                        <?php if ($deposit['method'] == 'ETH Transfer'): ?>
+                                            | <i class="fas fa-link"></i> <span class="text-truncate d-inline-block" style="max-width: 200px;"><?php echo htmlspecialchars($deposit['transaction_ref']); ?></span>
+                                        <?php else: ?>
+                                            | <i class="fas fa-receipt"></i> <?php echo htmlspecialchars($deposit['transaction_ref']); ?>
+                                        <?php endif; ?>
+                                    </small>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Confirmed Deposits Section -->
+        <?php if (!empty($confirmed_deposits)): ?>
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-check-circle text-success"></i> Recent Deposits
+                    </div>
+                    <div class="card-body">
+                        <?php foreach($confirmed_deposits as $deposit): ?>
+                            <div class="deposit-card confirmed">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                    <div>
+                                        <strong>$<?php echo number_format($deposit['amount'], 2); ?></strong>
+                                        <span class="method-badge <?php echo ($deposit['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
+                                            <i class="fas <?php echo ($deposit['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
+                                            <?php echo $deposit['method']; ?>
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-success">Confirmed</span>
+                                        <small class="text-muted ms-2"><?php echo date('M d, Y H:i', strtotime($deposit['created_at'])); ?></small>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user"></i> <?php echo htmlspecialchars($deposit['depositor_name']); ?>
+                                        <?php if ($deposit['method'] == 'ETH Transfer'): ?>
+                                            | <i class="fas fa-link"></i> <span class="text-truncate d-inline-block" style="max-width: 200px;"><?php echo htmlspecialchars($deposit['transaction_ref']); ?></span>
+                                        <?php endif; ?>
+                                    </small>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div class="row mt-3">
             <div class="col-12">
@@ -216,8 +358,8 @@ $display_name = $user['username'];
                                 while($row = $stmt->fetch(PDO::FETCH_ASSOC)): ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($row['description']); ?></td>
-                                        <td class="<?php echo ($row['type'] == 'credit' || $row['type'] == 'profit' || $row['type'] == 'referral_bonus') ? 'text-success' : 'text-danger'; ?>">
-                                            <?php if ($row['type'] == 'credit' || $row['type'] == 'profit' || $row['type'] == 'referral_bonus'): ?>+<?php else: ?>-<?php endif; ?>$<?php echo number_format($row['amount'], 2); ?>
+                                        <td class="<?php echo ($row['type'] == 'credit' || $row['type'] == 'profit' || $row['type'] == 'referral_bonus_credit') ? 'text-success' : 'text-danger'; ?>">
+                                            <?php if ($row['type'] == 'credit' || $row['type'] == 'profit' || $row['type'] == 'referral_bonus_credit'): ?>+<?php else: ?>-<?php endif; ?>$<?php echo number_format($row['amount'], 2); ?>
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>

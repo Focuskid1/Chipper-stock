@@ -28,8 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $amount_usd = $amount;
         }
         
+        // Set method description
+        $method_display = ($payment_method == 'crypto') ? 'ETH Transfer' : 'Bank Transfer';
+        
         $stmt = $db->prepare("INSERT INTO deposits (user_id, amount, method, status, depositor_name, depositor_phone, depositor_bank, transaction_ref) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?)");
-        $stmt->execute([$user['id'], $amount_usd, $payment_method, $depositor_name, $depositor_phone, $depositor_bank, $transaction_ref]);
+        $stmt->execute([$user['id'], $amount_usd, $method_display, $depositor_name, $depositor_phone, $depositor_bank, $transaction_ref]);
         
         $_SESSION['success'] = ['type' => 'success', 'message' => 'Deposit submitted for approval. You will be credited once confirmed.'];
         redirect('/pages/dashboard.php');
@@ -291,7 +294,6 @@ function setCurrency(currency) {
 }
 
 function selectMethod(method) {
-    // Update radio buttons
     document.querySelectorAll('.payment-method-card').forEach(function(card) {
         card.classList.remove('active');
         var radio = card.querySelector('input[type="radio"]');
@@ -301,7 +303,6 @@ function selectMethod(method) {
         }
     });
     
-    // Show/hide details
     var bankDetails = document.getElementById('bankDetails');
     var cryptoDetails = document.getElementById('cryptoDetails');
     var refLabel = document.getElementById('refLabel');
@@ -337,7 +338,6 @@ function copyAddress() {
             }, 1500);
         });
     } else {
-        // Fallback
         var textarea = document.createElement('textarea');
         textarea.value = address;
         document.body.appendChild(textarea);
