@@ -141,3 +141,71 @@ function checkAndApplyReferralBonus($user_id) {
     return false;
 }
 ?>
+
+// --- CURRENCY CONVERSION FUNCTIONS ---
+function getExchangeRate() {
+    // Try to get live rate from API
+    $api_url = "https://api.exchangerate-api.com/v4/latest/USD";
+    
+    // Cache the rate for 1 hour to avoid hitting API limits
+    $cache_file = __DIR__ . '/../cache/exchange_rate.json';
+    $cache_time = 3600; // 1 hour
+    
+    // Create cache directory if it doesn't exist
+    if (!file_exists(__DIR__ . '/../cache')) {
+        mkdir(__DIR__ . '/../cache', 0777, true);
+    }
+    
+    // Check if cache exists and is still valid
+    if (file_exists($cache_file) && (time() - filemtime($cache_file) < $cache_time)) {
+        $data = json_decode(file_get_contents($cache_file), true);
+        if ($data && isset($data['rate'])) {
+            return $data['rate'];
+        }
+    }
+    
+    // Fetch live rate
+    try {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $api_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        
+        if ($response) {
+            $data = json_decode($response, true);
+            if ($data && isset($data['rates']['NGN'])) {
+                $rate = $data['rates']['NGN'];
+                // Save to cache
+                file_put_contents($cache_file, json_encode(['rate' => $rate, 'updated' => time()]));
+                return $rate;
+            }
+        }
+    } catch (Exception $e) {
+        // Fallback to a default rate if API fails
+        return 1550; // Default rate (will be updated when API works)
+    }
+    
+    return 1550; // Fallback rate
+}
+
+function formatCurrency($amount, $currency = 'USD') {
+    if ($currency == 'NGN') {
+        return '₦' . number_format($amount, 2);
+    }
+    return '$' . number_format($amount, 2);
+}
+
+function convertCurrency($amount, $from = 'USD', $to = 'NGN') {
+    if ($from == $to) return $amount;
+    
+    $rate = getExchangeRate();
+    if ($from == 'USD' && $to == 'NGN') {
+        return $amount * $rate;
+    } elseif ($from == 'NGN' && $to == 'USD') {
+        return $amount / $rate;
+    }
+    return $amount;
+}
+?>
