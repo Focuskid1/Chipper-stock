@@ -2,7 +2,7 @@
 require_once '../includes/config.php';
 require_once '../includes/functions.php';
 if (!isLoggedIn()) redirect('/pages/login.php');
-$user = getUser($_SESSION['user_id');
+$user = getUser($_SESSION['user_id']);
 
 // Get exchange rate
 $exchange_rate = getExchangeRate();
@@ -166,7 +166,7 @@ function setCurrency(currency) {
     document.getElementById('selectedCurrency').value = currency;
     
     // Update active button
-    document.querySelectorAll('.btn-currency').forEach(btn => {
+    document.querySelectorAll('.btn-currency').forEach(function(btn) {
         btn.classList.remove('active');
         if (btn.dataset.currency === currency) {
             btn.classList.add('active');
@@ -174,10 +174,10 @@ function setCurrency(currency) {
     });
     
     // Update label
-    const label = document.getElementById('amountLabel');
-    const help = document.getElementById('amountHelp');
-    const rate = <?php echo $exchange_rate; ?>;
-    const minDeposit = <?php echo MINIMUM_DEPOSIT; ?>;
+    var label = document.getElementById('amountLabel');
+    var help = document.getElementById('amountHelp');
+    var rate = <?php echo $exchange_rate; ?>;
+    var minDeposit = <?php echo MINIMUM_DEPOSIT; ?>;
     
     if (currency === 'NGN') {
         label.textContent = 'Amount (₦)';
