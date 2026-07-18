@@ -157,6 +157,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         margin-top: 8px;
     }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="../assets/js/chat.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="../assets/js/chat.js"></script>
 </head>
 <body>
 <div class="container" style="max-width:650px; margin-top:3vh; margin-bottom:3vh;">

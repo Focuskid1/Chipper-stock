@@ -185,6 +185,8 @@
             .step-circle { width: 48px; height: 48px; font-size: 1.2rem; }
         }
     </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="assets/js/chat.js"></script>
 </head>
 <body>
     <!-- ============================================================

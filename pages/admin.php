@@ -160,6 +160,10 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
         to { opacity: 1; transform: translateY(0); }
     }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="../assets/js/chat.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="../assets/js/chat.js"></script>
 </head>
 <body>
 <div class="container-fluid mt-4">
