@@ -10,7 +10,7 @@ define('SITE_URL', 'http://chipper-stock.onrender.com');
 define('ADMIN_EMAIL', 'support@chippersstock.com');
 define('DAILY_RETURN_PERCENT', 10);
 define('REFERRAL_BONUS_PERCENT', 5);
-define('MINIMUM_DEPOSIT', 10);
+define('MINIMUM_DEPOSIT', 10);   // <-- Minimum deposit is $10
 define('MINIMUM_WITHDRAWAL', 5);
 
 define('BANK_NAME', 'Moniepoint MFB');

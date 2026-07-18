@@ -2,7 +2,7 @@
 require_once '../includes/config.php';
 require_once '../includes/functions.php';
 if (!isLoggedIn()) redirect('/pages/login.php');
-$user = getUser($_SESSION['user_id']);
+$user = getUser($_SESSION['user_id');
 
 // Get exchange rate
 $exchange_rate = getExchangeRate();
@@ -82,6 +82,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     .currency-selector .btn-currency:hover {
         border-color: #0d6efd;
     }
+    .min-deposit-badge {
+        background: #e8f4fd;
+        border-radius: 30px;
+        padding: 4px 16px;
+        font-size: 0.85rem;
+        color: #0d6efd;
+        font-weight: 600;
+        display: inline-block;
+    }
 </style>
 </head>
 <body>
@@ -89,6 +98,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="card shadow p-4">
         <h2 class="text-center mb-4">💰 Fund Your AI Trading Account</h2>
         <?php displayFlash('error'); displayFlash('success'); ?>
+        
+        <!-- Minimum Deposit Badge -->
+        <div class="text-center mb-3">
+            <span class="min-deposit-badge">
+                <i class="fas fa-info-circle"></i> Minimum Deposit: <strong>$<?php echo MINIMUM_DEPOSIT; ?></strong>
+            </span>
+        </div>
         
         <div class="card bg-light mb-4">
             <div class="card-body">
@@ -161,13 +177,14 @@ function setCurrency(currency) {
     const label = document.getElementById('amountLabel');
     const help = document.getElementById('amountHelp');
     const rate = <?php echo $exchange_rate; ?>;
+    const minDeposit = <?php echo MINIMUM_DEPOSIT; ?>;
     
     if (currency === 'NGN') {
         label.textContent = 'Amount (₦)';
-        help.textContent = 'Minimum investment: ₦' + (<?php echo MINIMUM_DEPOSIT; ?> * rate).toFixed(2);
+        help.textContent = 'Minimum investment: ₦' + (minDeposit * rate).toFixed(2);
     } else {
         label.textContent = 'Amount ($)';
-        help.textContent = 'Minimum investment: $<?php echo MINIMUM_DEPOSIT; ?>';
+        help.textContent = 'Minimum investment: $' + minDeposit;
     }
 }
 </script>
