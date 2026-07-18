@@ -5,7 +5,7 @@ if (!isLoggedIn()) redirect('/pages/login.php');
 $user = getUser($_SESSION['user_id']);
 $ref_count = getReferralCount($user['id']);
 
-// Add profit ONLY if 12 hours have passed (fixed)
+// Add profit ONLY if 24 hours have passed
 addProfitIfNeeded($user['id']);
 
 // Refresh user data after profit addition
@@ -14,7 +14,7 @@ $next_profit_time = getLastProfitTime($user['id']);
 
 if ($next_profit_time) {
     $next = new DateTime($next_profit_time);
-    $next->modify('+12 hours');
+    $next->modify('+24 hours');
     $next_profit = $next->format('Y-m-d H:i:s');
 } else {
     // If no profit yet, show message based on deposits
@@ -26,7 +26,7 @@ if ($next_profit_time) {
     }
 }
 
-// Get user's registration name (username from signup)
+// Get user's username (registration name)
 $display_name = $user['username'];
 ?>
 <!DOCTYPE html>
@@ -36,6 +36,18 @@ $display_name = $user['username'];
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/style.css">
+<style>
+    .username-display {
+        color: #006400 !important;  /* Dark green */
+        font-weight: 700;
+        font-size: 1.1rem;
+        background: rgba(0, 100, 0, 0.08);
+        padding: 4px 12px;
+        border-radius: 30px;
+        border: 1px solid rgba(0, 100, 0, 0.15);
+        display: inline-block;
+    }
+</style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-gradient">
@@ -45,8 +57,10 @@ $display_name = $user['username'];
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto d-flex flex-wrap gap-2">
-                    <li class="nav-item"><span class="text-white me-2">👋 <?php echo htmlspecialchars($display_name); ?></span></li>
+                <ul class="navbar-nav ms-auto d-flex flex-wrap gap-2 align-items-center">
+                    <li class="nav-item">
+                        <span class="username-display">👤 <?php echo htmlspecialchars($display_name); ?></span>
+                    </li>
                     <li class="nav-item"><a href="deposit.php" class="btn btn-success btn-sm">➕ Deposit</a></li>
                     <li class="nav-item"><a href="withdraw.php" class="btn btn-warning btn-sm">💳 Withdraw</a></li>
                     <li class="nav-item"><a href="../logout.php" class="btn btn-danger btn-sm">🚪 Logout</a></li>
@@ -58,7 +72,7 @@ $display_name = $user['username'];
     <div class="container-fluid mt-4">
         <!-- Profit Info Alert -->
         <div class="alert alert-success" role="alert">
-            <strong>💡 15% profit every 12 hours!</strong> <?php if ($next_profit_time && strpos($next_profit, 'Make a deposit') === false): ?>
+            <strong>💡 15% profit every 24 hours!</strong> <?php if ($next_profit_time && strpos($next_profit, 'Make a deposit') === false): ?>
                 Your next profit will be added at: <strong><?php echo $next_profit; ?></strong>
             <?php else: ?>
                 <?php echo $next_profit; ?>

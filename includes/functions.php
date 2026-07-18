@@ -95,12 +95,12 @@ function shouldAddProfit($user_id) {
     $now = new DateTime();
     $diff = $now->getTimestamp() - $last->getTimestamp();
     
-    // Return true only if 12 hours (43200 seconds) have passed
-    return $diff >= 43200;
+    // Return true only if 24 hours (86400 seconds) have passed
+    return $diff >= 86400;
 }
 
 function addProfitIfNeeded($user_id) {
-    // Check if we should add profit (only once per 12 hours)
+    // Check if we should add profit (only once per 24 hours)
     if (shouldAddProfit($user_id)) {
         $profit = calculateProfit($user_id);
         if ($profit > 0) {
