@@ -1,8 +1,23 @@
 <?php
-require_once '../includes/auth.php';
+require_once '../includes/config.php';
+require_once '../includes/functions.php';
 if (!isLoggedIn()) redirect('/pages/login.php');
 $user = getUser($_SESSION['user_id']);
 $ref_count = getReferralCount($user['id']);
+
+// Add profit if 12 hours have passed
+addProfitIfNeeded($user['id']);
+
+// Refresh user data after profit addition
+$user = getUser($_SESSION['user_id']);
+$next_profit_time = getLastProfitTime($user['id']);
+if ($next_profit_time) {
+    $next = new DateTime($next_profit_time);
+    $next->modify('+12 hours');
+    $next_profit = $next->format('Y-m-d H:i:s');
+} else {
+    $next_profit = 'After first deposit';
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -31,8 +46,9 @@ $ref_count = getReferralCount($user['id']);
     </nav>
 
     <div class="container-fluid mt-4">
-        <div class="alert alert-info" role="alert">
-            <strong>💡 Your AI trading account is active.</strong> Daily returns are credited automatically every 24 hours.
+        <!-- Profit Info Alert -->
+        <div class="alert alert-success" role="alert">
+            <strong>💡 15% profit every 12 hours!</strong> Your next profit will be added at: <strong><?php echo $next_profit; ?></strong>
         </div>
 
         <div class="row g-3 dashboard-cards">
@@ -82,7 +98,7 @@ $ref_count = getReferralCount($user['id']);
                                     <tr>
                                         <td><?php echo htmlspecialchars($row['description']); ?></td>
                                         <td class="<?php echo ($row['type'] == 'credit') ? 'text-success' : 'text-danger'; ?>">
-                                            <?php echo ($row['type'] == 'credit') ? '+' : '-'; ?>$<?php echo number_format($row['amount'], 2); ?>
+                                            <?php if ($row['type'] == 'credit'): ?>+<?php else: ?>-<?php endif; ?>$<?php echo number_format($row['amount'], 2); ?>
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>

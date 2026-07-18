@@ -1,18 +1,29 @@
 <?php
-require_once __DIR__ . "/../includes/functions.php";
-require_once '../includes/auth.php';
+require_once '../includes/config.php';
+require_once '../includes/functions.php';
 if (!isLoggedIn()) redirect('/pages/login.php');
 $user = getUser($_SESSION['user_id']);
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $amount = floatval($_POST['amount']);
+    $method = $_POST['method'];
+    $account_details = trim($_POST['account_details']);
+
     if ($amount < MINIMUM_WITHDRAWAL) {
         $_SESSION['error'] = ['type' => 'danger', 'message' => 'Minimum withdrawal is $' . MINIMUM_WITHDRAWAL];
     } elseif ($amount > $user['balance']) {
         $_SESSION['error'] = ['type' => 'danger', 'message' => 'Insufficient balance'];
+    } elseif (empty($account_details)) {
+        $_SESSION['error'] = ['type' => 'danger', 'message' => 'Please provide account details'];
     } else {
-        updateBalance($user['id'], -$amount);
-        addTransaction($user['id'], 'debit', $amount, 'Withdrawal of earnings $' . $amount);
-        $_SESSION['success'] = ['type' => 'success', 'message' => 'Withdrawal request submitted. You will receive funds within 24 hours.'];
+        // Save withdrawal request with status 'pending'
+        $stmt = $db->prepare("INSERT INTO withdrawals (user_id, amount, method, account_details, status) VALUES (?, ?, ?, ?, 'pending')");
+        $stmt->execute([$user['id'], $amount, $method, $account_details]);
+        
+        // Add transaction record (pending)
+        addTransaction($user['id'], 'pending', -$amount, 'Withdrawal pending approval: $' . $amount);
+        
+        $_SESSION['success'] = ['type' => 'success', 'message' => 'Withdrawal request submitted for approval.'];
         redirect('/pages/dashboard.php');
     }
 }
@@ -47,9 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
             <div class="mb-3">
                 <label class="form-label">Account Details</label>
-                <textarea name="account_details" class="form-control" rows="3" placeholder="Enter your bank/account details"></textarea>
+                <textarea name="account_details" class="form-control" rows="3" placeholder="Enter your bank/account details" required></textarea>
             </div>
-            <button type="submit" class="btn btn-warning w-100">💰 Request Withdrawal</button>
+            <button type="submit" class="btn btn-warning w-100">Submit Withdrawal Request</button>
         </form>
         <p class="mt-3"><a href="/pages/dashboard.php">← Back to Dashboard</a></p>
     </div>

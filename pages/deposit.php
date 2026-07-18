@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . "/../includes/functions.php";
-require_once '../includes/auth.php';
+require_once '../includes/config.php';
+require_once '../includes/functions.php';
 if (!isLoggedIn()) redirect('/pages/login.php');
 $user = getUser($_SESSION['user_id']);
 
@@ -16,25 +16,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } elseif (empty($depositor_name) || empty($depositor_phone) || empty($depositor_bank) || empty($transaction_ref)) {
         $_SESSION['error'] = ['type' => 'danger', 'message' => 'All fields are required.'];
     } else {
+        // Save deposit request with status 'pending'
         $stmt = $db->prepare("INSERT INTO deposits (user_id, amount, method, status, depositor_name, depositor_phone, depositor_bank, transaction_ref) VALUES (?, ?, 'bank_transfer', 'pending', ?, ?, ?, ?)");
-        $stmt->bindValue(1, $user['id'], SQLITE3_INTEGER);
-        $stmt->bindValue(2, $amount, SQLITE3_FLOAT);
-        $stmt->bindValue(3, $depositor_name, SQLITE3_TEXT);
-        $stmt->bindValue(4, $depositor_phone, SQLITE3_TEXT);
-        $stmt->bindValue(5, $depositor_bank, SQLITE3_TEXT);
-        $stmt->bindValue(6, $transaction_ref, SQLITE3_TEXT);
-        $stmt->execute();
+        $stmt->execute([$user['id'], $amount, $depositor_name, $depositor_phone, $depositor_bank, $transaction_ref]);
         
-        updateBalance($user['id'], $amount);
-        addTransaction($user['id'], 'credit', $amount, 'Investment deposit of $' . $amount);
-        $_SESSION['success'] = ['type' => 'success', 'message' => 'Investment recorded! Your AI trading account has been credited.'];
+        // Add transaction record (pending)
+        addTransaction($user['id'], 'pending', $amount, 'Deposit pending approval: $' . $amount);
+        
+        $_SESSION['success'] = ['type' => 'success', 'message' => 'Deposit submitted for approval. You will be credited once confirmed.'];
         redirect('/pages/dashboard.php');
     }
 }
 ?>
 <!DOCTYPE html>
 <html>
-<head><title>Invest – <?php echo SITE_NAME; ?></title>
+<head><title>Deposit – <?php echo SITE_NAME; ?></title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -53,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <p><strong>Account Name:</strong> <?php echo ACCOUNT_NAME; ?></p>
                 <p><strong>Account Number:</strong> <?php echo ACCOUNT_NUMBER; ?></p>
                 <p><strong>Swift:</strong> <?php echo BANK_SWIFT; ?></p>
-                <p class="text-muted">After sending, fill in the details below to confirm your investment. Your account will be credited instantly.</p>
+                <p class="text-muted">After sending, fill in the details below to confirm your investment.</p>
             </div>
         </div>
 
@@ -79,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <input type="number" name="amount" class="form-control" step="0.01" min="<?php echo MINIMUM_DEPOSIT; ?>" required>
                 <small class="text-muted">Minimum investment: $<?php echo MINIMUM_DEPOSIT; ?></small>
             </div>
-            <button type="submit" class="btn btn-success w-100">💳 Confirm Investment</button>
+            <button type="submit" class="btn btn-success w-100">Submit for Approval</button>
         </form>
         <p class="mt-3"><a href="/pages/dashboard.php">← Back to Dashboard</a></p>
     </div>
