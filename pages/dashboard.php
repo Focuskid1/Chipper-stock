@@ -265,9 +265,22 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
         font-size: 0.8rem;
         display: inline-block;
     }
+    .info-box {
+        background: #e8f4fd;
+        border-left: 4px solid #0d6efd;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 12px;
+    }
+    .info-box.info-box-green {
+        background: #e8f5e9;
+        border-left-color: #198754;
+    }
+    .info-box.info-box-gold {
+        background: #fff8e1;
+        border-left-color: #ffc107;
+    }
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="../assets/js/chat.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg modern-navbar">
@@ -316,12 +329,28 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <?php endif; ?>
         </div>
 
-        <!-- Referral Bonus Alert -->
+        <!-- Referral Bonus Info Alerts -->
         <?php if ($ref_count > 0): ?>
             <div class="alert alert-info" role="alert">
                 <i class="fas fa-gift"></i> <strong>$1 Referral Bonus!</strong> You've earned <strong>$<?php echo number_format($ref_bonus_earned, 2); ?></strong> from <?php echo $ref_count; ?> referral(s). Each referral gives you $1 instantly!
             </div>
         <?php endif; ?>
+
+        <!-- Referral Bonus Withdrawal Rules -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="info-box info-box-green">
+                    <i class="fas fa-check-circle text-success"></i> 
+                    <strong>Minimum Deposit:</strong> You can withdraw your profits and referral bonuses after your first <strong>$5 deposit</strong>.
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-box info-box-gold">
+                    <i class="fas fa-trophy text-warning"></i> 
+                    <strong>Referral Bonus Withdrawal:</strong> You can withdraw your referral bonuses after reaching <strong>20 referrals</strong>.
+                </div>
+            </div>
+        </div>
 
         <div class="row g-3 dashboard-cards">
             <div class="col-12 col-sm-6 col-xl-4">
@@ -349,6 +378,11 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <h2><?php echo $ref_count; ?></h2>
                         <p class="small">Earn <strong>$1</strong> per referral instantly</p>
                         <p class="small">Referral bonuses earned: <strong>$<?php echo number_format($ref_bonus_earned, 2); ?></strong></p>
+                        <?php if ($ref_count < 20): ?>
+                            <p class="small text-warning"><?php echo 20 - $ref_count; ?> more referrals to unlock referral bonus withdrawal</p>
+                        <?php else: ?>
+                            <p class="small text-success">✅ You can withdraw your referral bonuses!</p>
+                        <?php endif; ?>
                         <p class="small">Your referral link: <br><code><?php echo SITE_URL; ?>/pages/register.php?ref=<?php echo $user['id']; ?></code></p>
                     </div>
                 </div>
