@@ -188,3 +188,36 @@ function convertCurrency($amount, $from = 'USD', $to = 'NGN') {
     return $amount;
 }
 ?>
+
+// --- REFERRAL BONUS FUNCTIONS ---
+function getReferralBonusBalance($user_id) {
+    global $db;
+    // Get total referral bonuses earned
+    $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = ? AND type = 'referral_bonus'");
+    $stmt->execute([$user_id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row['total'] ?? 0;
+}
+
+function getReferralBonusWithdrawable($user_id) {
+    $ref_count = getReferralCount($user_id);
+    if ($ref_count >= 20) {
+        return getReferralBonusBalance($user_id);
+    }
+    return 0;
+}
+
+function processReferralBonusToBalance($user_id) {
+    $ref_count = getReferralCount($user_id);
+    if ($ref_count >= 20) {
+        $bonus_amount = getReferralBonusBalance($user_id);
+        if ($bonus_amount > 0) {
+            // Add to balance
+            updateBalance($user_id, $bonus_amount);
+            // Record transaction
+            addTransaction($user_id, 'credit', $bonus_amount, 'Referral bonus released (20+ referrals)');
+            return true;
+        }
+    }
+    return false;
+}

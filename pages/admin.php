@@ -159,15 +159,35 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
     }
+    .admin-review-btn {
+        background: linear-gradient(135deg, #ffc107, #f59e0b);
+        color: #0a1628;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .admin-review-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+        color: #0a1628;
+    }
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="../assets/js/chat.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="../assets/js/chat.js"></script>
 </head>
 <body>
 <div class="container-fluid mt-4">
-    <h1><i class="fas fa-shield-alt text-primary"></i> Admin Panel</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1><i class="fas fa-shield-alt text-primary"></i> Admin Panel</h1>
+        <a href="/pages/reviews.php" class="admin-review-btn">
+            <i class="fas fa-star"></i> Manage Reviews
+        </a>
+    </div>
     <?php displayFlash('success'); ?>
     
     <!-- ============================================================ -->
@@ -212,7 +232,7 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
             </div>
         </div>
 
-        <!-- Tab Content: Pending Deposits (Green / Positive) -->
+        <!-- Tab Content: Pending Deposits -->
         <div class="admin-tab-content" id="admin-tab-pending-deposits">
             <div class="table-wrapper">
                 <table class="table table-striped">
@@ -276,7 +296,7 @@ $withdrawals = $db->query("SELECT * FROM withdrawals ORDER BY id DESC");
             </div>
         </div>
 
-        <!-- Tab Content: Pending Withdrawals (Red / Negative) -->
+        <!-- Tab Content: Pending Withdrawals -->
         <div class="admin-tab-content" id="admin-tab-pending-withdrawals">
             <div class="table-wrapper">
                 <table class="table table-striped">
@@ -346,88 +366,3 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-        <!-- Reviews Management Tab -->
-        <button class="tab-btn" data-tab="reviews">
-            <i class="fas fa-star tab-icon text-warning"></i> Reviews
-            <?php 
-                $reviews = json_decode(file_get_contents(__DIR__ . '/../reviews.json'), true);
-                $pending_reviews = array_filter($reviews, function($r) { return $r['status'] == 'pending'; });
-                $pending_count = count($pending_reviews);
-            ?>
-            <span class="badge-count"><?php echo $pending_count; ?></span>
-        </button>
-
-        <!-- Tab Content: Reviews -->
-        <div class="admin-tab-content" id="admin-tab-reviews">
-            <h4>Reviews Management</h4>
-            <?php
-            $reviews = json_decode(file_get_contents(__DIR__ . '/../reviews.json'), true);
-            
-            // Handle review actions
-            if (isset($_GET['approve_review'])) {
-                $id = intval($_GET['approve_review']);
-                foreach($reviews as &$r) {
-                    if ($r['id'] == $id) {
-                        $r['status'] = 'approved';
-                        break;
-                    }
-                }
-                file_put_contents(__DIR__ . '/../reviews.json', json_encode($reviews));
-                $_SESSION['success'] = ['type' => 'success', 'message' => 'Review approved!'];
-                redirect('/pages/admin.php');
-            }
-            
-            if (isset($_GET['delete_review'])) {
-                $id = intval($_GET['delete_review']);
-                $reviews = array_filter($reviews, function($r) use ($id) {
-                    return $r['id'] != $id;
-                });
-                file_put_contents(__DIR__ . '/../reviews.json', json_encode(array_values($reviews)));
-                $_SESSION['success'] = ['type' => 'success', 'message' => 'Review deleted!'];
-                redirect('/pages/admin.php');
-            }
-            ?>
-            <div class="table-wrapper">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Review</th>
-                            <th>Rating</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($reviews as $review): ?>
-                            <tr>
-                                <td><?php echo $review['id']; ?></td>
-                                <td><?php echo htmlspecialchars($review['name']); ?></td>
-                                <td><?php echo htmlspecialchars($review['review']); ?></td>
-                                <td>
-                                    <?php for($i = 1; $i <= 5; $i++): ?>
-                                        <?php if ($i <= $review['rating']): ?>
-                                            <i class="fas fa-star text-warning" style="font-size:0.8rem;"></i>
-                                        <?php else: ?>
-                                            <i class="far fa-star text-warning" style="font-size:0.8rem;"></i>
-                                        <?php endif; ?>
-                                    <?php endfor; ?>
-                                </td>
-                                <td><span class="badge bg-<?php echo $review['status'] == 'approved' ? 'success' : 'warning'; ?>"><?php echo $review['status']; ?></span></td>
-                                <td>
-                                    <?php if ($review['status'] == 'pending'): ?>
-                                        <a href="?approve_review=<?php echo $review['id']; ?>" class="btn btn-success btn-sm" onclick="return confirm('Approve this review?')">
-                                            <i class="fas fa-check"></i> Approve
-                                        </a>
-                                    <?php endif; ?>
-                                    <a href="?delete_review=<?php echo $review['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Delete this review?')">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>

@@ -4,10 +4,16 @@ require_once '../includes/functions.php';
 if (!isLoggedIn()) redirect('/pages/login.php');
 $user = getUser($_SESSION['user_id']);
 $ref_count = getReferralCount($user['id']);
-$ref_bonus_earned = getReferralBonusEarned($user['id']);
+$ref_bonus_earned = getReferralBonusBalance($user['id']);
+$ref_bonus_withdrawable = getReferralBonusWithdrawable($user['id']);
 
 // Add profit ONLY if 24 hours have passed
 addProfitIfNeeded($user['id']);
+
+// Process referral bonus if 20+ referrals
+if ($ref_count >= 20) {
+    processReferralBonusToBalance($user['id']);
+}
 
 // Refresh user data after updates
 $user = getUser($_SESSION['user_id']);
@@ -56,6 +62,7 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/chat.js"></script>
 <style>
     .modern-navbar {
         background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0d1f3c 100%) !important;
@@ -280,6 +287,15 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
         background: #fff8e1;
         border-left-color: #ffc107;
     }
+    .bonus-highlight {
+        background: linear-gradient(135deg, #00f5a0, #00d9f5);
+        color: #0a1628;
+        padding: 6px 14px;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: inline-block;
+    }
 </style>
 </head>
 <body>
@@ -341,13 +357,18 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="col-md-6">
                 <div class="info-box info-box-green">
                     <i class="fas fa-check-circle text-success"></i> 
-                    <strong>Minimum Deposit:</strong> You can withdraw your profits and referral bonuses after your first <strong>$5 deposit</strong>.
+                    <strong>Minimum Deposit:</strong> You can withdraw your profits after your first <strong>$5 deposit</strong>.
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="info-box info-box-gold">
                     <i class="fas fa-trophy text-warning"></i> 
-                    <strong>Referral Bonus Withdrawal:</strong> You can withdraw your referral bonuses after reaching <strong>20 referrals</strong>.
+                    <strong>Referral Bonus:</strong> 
+                    <?php if ($ref_count >= 20): ?>
+                        <span class="bonus-highlight">✅ $<?php echo number_format($ref_bonus_withdrawable, 2); ?> bonus released to your balance!</span>
+                    <?php else: ?>
+                        <span>Earn <strong>$1</strong> per referral. <strong><?php echo 20 - $ref_count; ?></strong> more referrals to unlock bonus withdrawal.</span>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -378,10 +399,10 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <h2><?php echo $ref_count; ?></h2>
                         <p class="small">Earn <strong>$1</strong> per referral instantly</p>
                         <p class="small">Referral bonuses earned: <strong>$<?php echo number_format($ref_bonus_earned, 2); ?></strong></p>
-                        <?php if ($ref_count < 20): ?>
-                            <p class="small text-warning"><?php echo 20 - $ref_count; ?> more referrals to unlock referral bonus withdrawal</p>
+                        <?php if ($ref_count >= 20): ?>
+                            <p class="small text-success">✅ Bonus released to balance!</p>
                         <?php else: ?>
-                            <p class="small text-success">✅ You can withdraw your referral bonuses!</p>
+                            <p class="small text-warning"><?php echo 20 - $ref_count; ?> more referrals to unlock bonus withdrawal</p>
                         <?php endif; ?>
                         <p class="small">Your referral link: <br><code><?php echo SITE_URL; ?>/pages/register.php?ref=<?php echo $user['id']; ?></code></p>
                     </div>

@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/chat.js"></script>
 <style>
     .currency-converter {
         background: #f8f9fa;
@@ -94,8 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         color: #6b7a93;
     }
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="../assets/js/chat.js"></script>
 </head>
 <body>
 <div class="container" style="max-width:500px; margin-top:5vh;">
@@ -112,7 +111,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <i class="fas fa-info-circle"></i> Withdrawals are processed in <strong>USDT (TRC20)</strong> only.
         </div>
 
-        <!-- Currency Converter -->
         <div class="currency-converter">
             <div class="d-flex justify-content-between align-items-center">
                 <div>

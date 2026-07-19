@@ -38,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
+<script src="../assets/js/chat.js"></script>
 <style>
     .wallet-address {
         background: #1a1a2e;
@@ -120,8 +121,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         margin-top: 8px;
     }
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="../assets/js/chat.js"></script>
 </head>
 <body>
 <div class="container" style="max-width:600px; margin-top:3vh; margin-bottom:3vh;">
@@ -135,7 +134,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </span>
         </div>
 
-        <!-- USDT TRC20 Wallet Details -->
         <div class="card bg-light mb-4">
             <div class="card-body">
                 <h5 class="card-title">🪙 Send USDT (TRC20) to this address:</h5>
@@ -156,7 +154,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
         </div>
 
-        <!-- Currency Converter -->
         <div class="currency-converter">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
