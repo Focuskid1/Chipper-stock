@@ -229,6 +229,10 @@
             <hr class="my-4">
             <p>Start with as little as $10 – no hidden fees.</p>
             <a href="pages/register.php" class="btn btn-success btn-lg">Start Investing Now</a>
+            <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
+                <a href="pages/faq.php" class="btn btn-outline-primary"><i class="fas fa-question-circle"></i> FAQ</a>
+                <a href="pages/reviews.php" class="btn btn-outline-success"><i class="fas fa-star"></i> Read Reviews</a>
+            </div>
         </div>
     </div>
 

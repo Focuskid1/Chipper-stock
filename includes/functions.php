@@ -38,15 +38,7 @@ function getReferralCount($user_id) {
 
 function getReferralBonusEarned($user_id) {
     global $db;
-    $stmt = $db->prepare("SELECT COALESCE(SUM(bonus), 0) as total FROM referrals WHERE referrer_id = ? AND bonus > 0");
-    $stmt->execute([$user_id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $row['total'] ?? 0;
-}
-
-function getReferralBonusPending($user_id) {
-    global $db;
-    $stmt = $db->prepare("SELECT COALESCE(SUM(bonus), 0) as total FROM referrals WHERE referrer_id = ? AND bonus = 0");
+    $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = ? AND type = 'referral_bonus'");
     $stmt->execute([$user_id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return $row['total'] ?? 0;
@@ -83,7 +75,7 @@ function getTotalDeposits($user_id) {
 
 function calculateProfit($user_id) {
     $total_deposits = getTotalDeposits($user_id);
-    return $total_deposits * 0.15; // 15% profit
+    return $total_deposits * 0.15;
 }
 
 function getLastProfitTime($user_id) {
@@ -109,7 +101,7 @@ function shouldAddProfit($user_id) {
     $now = new DateTime();
     $diff = $now->getTimestamp() - $last->getTimestamp();
     
-    return $diff >= 86400; // 24 hours
+    return $diff >= 86400;
 }
 
 function addProfitIfNeeded($user_id) {
@@ -124,83 +116,29 @@ function addProfitIfNeeded($user_id) {
     return false;
 }
 
-// --- REFERRAL BONUS SYSTEM ---
-function getReferralMilestone($ref_count) {
-    if ($ref_count >= 10) {
-        return 10;
-    }
-    return 0;
-}
-
-function checkAndApplyReferralBonus($referrer_id) {
-    global $db;
-    $ref_count = getReferralCount($referrer_id);
+// --- REFERRAL BONUS SYSTEM ($1 per referral instantly) ---
+function addReferralBonus($referrer_id) {
+    $bonus_amount = 1.00; // $1 per referral
     
-    $milestone = getReferralMilestone($ref_count);
+    // Add to balance
+    updateBalance($referrer_id, $bonus_amount);
     
-    if ($milestone > 0) {
-        $stmt = $db->prepare("SELECT COUNT(*) as count FROM transactions WHERE user_id = ? AND type = 'referral_bonus' AND description LIKE ?");
-        $stmt->execute([$referrer_id, '%' . $milestone . ' referrals%']);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($row['count'] == 0) {
-            $user = getUser($referrer_id);
-            $bonus_amount = $user['balance'] * 0.20;
-            
-            if ($bonus_amount > 0) {
-                $stmt = $db->prepare("UPDATE referrals SET bonus = ? WHERE referrer_id = ? AND bonus = 0");
-                $stmt->execute([$bonus_amount, $referrer_id]);
-                
-                addTransaction($referrer_id, 'referral_bonus_pending', $bonus_amount, "Pending Referral Bonus (" . $milestone . " referrals) - 20% of balance (will credit in 24 hours)");
-                
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-function processPendingReferralBonuses($user_id) {
-    global $db;
+    // Record transaction
+    addTransaction($referrer_id, 'referral_bonus', $bonus_amount, 'Referral bonus: $1');
     
-    $stmt = $db->prepare("SELECT SUM(bonus) as total FROM referrals WHERE referrer_id = ? AND bonus > 0");
-    $stmt->execute([$user_id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    $pending_total = $row['total'] ?? 0;
-    
-    if ($pending_total > 0) {
-        $stmt = $db->prepare("SELECT COUNT(*) as count FROM transactions WHERE user_id = ? AND type = 'referral_bonus_credit' AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)");
-        $stmt->execute([$user_id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($row['count'] == 0) {
-            updateBalance($user_id, $pending_total);
-            addTransaction($user_id, 'referral_bonus_credit', $pending_total, "Referral Bonus Credited (20% of balance)");
-            
-            $stmt = $db->prepare("UPDATE referrals SET bonus = 0 WHERE referrer_id = ? AND bonus > 0");
-            $stmt->execute([$user_id]);
-            
-            return true;
-        }
-    }
-    return false;
+    return true;
 }
 
 // --- CURRENCY CONVERSION FUNCTIONS ---
 function getExchangeRate() {
-    // Try to get live rate from API
     $api_url = "https://api.exchangerate-api.com/v4/latest/USD";
-    
-    // Cache the rate for 1 hour to avoid hitting API limits
     $cache_file = __DIR__ . '/../cache/exchange_rate.json';
-    $cache_time = 3600; // 1 hour
+    $cache_time = 3600;
     
-    // Create cache directory if it doesn't exist
     if (!file_exists(__DIR__ . '/../cache')) {
         mkdir(__DIR__ . '/../cache', 0777, true);
     }
     
-    // Check if cache exists and is still valid
     if (file_exists($cache_file) && (time() - filemtime($cache_file) < $cache_time)) {
         $data = json_decode(file_get_contents($cache_file), true);
         if ($data && isset($data['rate'])) {
@@ -208,7 +146,6 @@ function getExchangeRate() {
         }
     }
     
-    // Fetch live rate
     try {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $api_url);
@@ -221,17 +158,15 @@ function getExchangeRate() {
             $data = json_decode($response, true);
             if ($data && isset($data['rates']['NGN'])) {
                 $rate = $data['rates']['NGN'];
-                // Save to cache
                 file_put_contents($cache_file, json_encode(['rate' => $rate, 'updated' => time()]));
                 return $rate;
             }
         }
     } catch (Exception $e) {
-        // Fallback to a default rate if API fails
         return 1550;
     }
     
-    return 1550; // Fallback rate
+    return 1550;
 }
 
 function formatCurrency($amount, $currency = 'USD') {

@@ -5,13 +5,9 @@ if (!isLoggedIn()) redirect('/pages/login.php');
 $user = getUser($_SESSION['user_id']);
 $ref_count = getReferralCount($user['id']);
 $ref_bonus_earned = getReferralBonusEarned($user['id']);
-$ref_bonus_pending = getReferralBonusPending($user['id']);
 
 // Add profit ONLY if 24 hours have passed
 addProfitIfNeeded($user['id']);
-
-// Process pending referral bonuses
-processPendingReferralBonuses($user['id']);
 
 // Refresh user data after updates
 $user = getUser($_SESSION['user_id']);
@@ -134,14 +130,6 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .user-badge { font-size: 0.8rem; padding: 4px 12px; }
         .nav-btn { padding: 6px 14px; font-size: 0.8rem; }
     }
-    .bonus-pending { 
-        background: rgba(255, 193, 7, 0.15);
-        border: 1px solid rgba(255, 193, 7, 0.3);
-        border-radius: 12px;
-        padding: 8px 16px;
-        font-size: 0.9rem;
-        color: #856404;
-    }
     .deposit-card {
         background: #fff;
         border-radius: 12px;
@@ -179,16 +167,11 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
         border-radius: 30px;
         font-weight: 600;
     }
-    .method-badge.bank {
-        background: #e8f4fd;
-        color: #0d6efd;
-    }
-    .method-badge.crypto {
+    .method-badge.usdt {
         background: #e8f5e9;
         color: #198754;
     }
     
-    /* ─── CLASSY TABS ─── */
     .classy-tabs {
         border-bottom: 2px solid #e9edf2;
         margin-bottom: 20px;
@@ -207,7 +190,6 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
         transition: all 0.3s ease;
         cursor: pointer;
         border-radius: 8px 8px 0 0;
-        position: relative;
         display: inline-flex;
         align-items: center;
         gap: 8px;
@@ -274,11 +256,16 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
         background: #d1e7dd;
         color: #0a3622;
     }
+    .referral-bonus-badge {
+        background: linear-gradient(135deg, #00f5a0, #00d9f5);
+        color: #0a1628;
+        padding: 4px 12px;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        display: inline-block;
+    }
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="../assets/js/chat.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="../assets/js/chat.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg modern-navbar">
@@ -327,17 +314,10 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <?php endif; ?>
         </div>
 
-        <!-- Pending Bonus Alert -->
-        <?php if ($ref_bonus_pending > 0): ?>
-            <div class="alert alert-warning bonus-pending" role="alert">
-                <i class="fas fa-hourglass-half"></i> <strong>Pending Bonus!</strong> You have <strong>$<?php echo number_format($ref_bonus_pending, 2); ?></strong> in referral bonuses that will be credited to your balance in 24 hours.
-            </div>
-        <?php endif; ?>
-
-        <!-- Referral Milestone Alert -->
-        <?php if ($ref_count > 0 && $ref_count % 10 == 0): ?>
+        <!-- Referral Bonus Alert -->
+        <?php if ($ref_count > 0): ?>
             <div class="alert alert-info" role="alert">
-                <i class="fas fa-trophy"></i> <strong>Congratulations!</strong> You've reached <?php echo $ref_count; ?> referrals! A 20% bonus has been added to your pending bonuses and will be credited in 24 hours.
+                <i class="fas fa-gift"></i> <strong>$1 Referral Bonus!</strong> You've earned <strong>$<?php echo number_format($ref_bonus_earned, 2); ?></strong> from <?php echo $ref_count; ?> referral(s). Each referral gives you $1 instantly!
             </div>
         <?php endif; ?>
 
@@ -365,20 +345,15 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="card-body">
                         <h5>👥 Referrals</h5>
                         <h2><?php echo $ref_count; ?></h2>
-                        <p class="small">Earn 20% bonus every 10 referrals</p>
-                        <p class="small">Bonuses earned: <strong>$<?php echo number_format($ref_bonus_earned, 2); ?></strong></p>
-                        <?php if ($ref_bonus_pending > 0): ?>
-                            <p class="small text-warning">Pending bonuses: <strong>$<?php echo number_format($ref_bonus_pending, 2); ?></strong></p>
-                        <?php endif; ?>
+                        <p class="small">Earn <strong>$1</strong> per referral instantly</p>
+                        <p class="small">Referral bonuses earned: <strong>$<?php echo number_format($ref_bonus_earned, 2); ?></strong></p>
                         <p class="small">Your referral link: <br><code><?php echo SITE_URL; ?>/pages/register.php?ref=<?php echo $user['id']; ?></code></p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ============================================================ -->
-        <!-- CLASSY TABS – Recent Activities -->
-        <!-- ============================================================ -->
+        <!-- CLASSY TABS -->
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
@@ -386,7 +361,6 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <i class="fas fa-history"></i> Recent Activities
                     </div>
                     <div class="card-body">
-                        <!-- Tab Buttons -->
                         <div class="classy-tabs" id="activityTabs">
                             <button class="tab-btn active" data-tab="pending-deposits">
                                 <i class="fas fa-clock tab-icon text-warning"></i> Pending Deposits
@@ -414,9 +388,8 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
                                                 <span class="amount-positive">+ $<?php echo number_format($deposit['amount'], 2); ?></span>
-                                                <span class="method-badge <?php echo ($deposit['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
-                                                    <i class="fas <?php echo ($deposit['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
-                                                    <?php echo $deposit['method']; ?>
+                                                <span class="method-badge usdt">
+                                                    <i class="fas fa-coins"></i> USDT TRC20
                                                 </span>
                                             </div>
                                             <div>
@@ -428,11 +401,7 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <small class="text-muted">
                                                 <i class="fas fa-user"></i> <?php echo htmlspecialchars($deposit['depositor_name']); ?> 
                                                 | <i class="fas fa-phone"></i> <?php echo htmlspecialchars($deposit['depositor_phone']); ?>
-                                                <?php if ($deposit['method'] == 'ETH Transfer'): ?>
-                                                    | <i class="fas fa-link"></i> <span class="text-truncate d-inline-block" style="max-width: 200px;"><?php echo htmlspecialchars($deposit['transaction_ref']); ?></span>
-                                                <?php else: ?>
-                                                    | <i class="fas fa-receipt"></i> <?php echo htmlspecialchars($deposit['transaction_ref']); ?>
-                                                <?php endif; ?>
+                                                | <i class="fas fa-link"></i> <span class="text-truncate d-inline-block" style="max-width: 200px;"><?php echo htmlspecialchars($deposit['transaction_ref']); ?></span>
                                             </small>
                                         </div>
                                     </div>
@@ -454,9 +423,8 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
                                                 <span class="amount-positive">+ $<?php echo number_format($deposit['amount'], 2); ?></span>
-                                                <span class="method-badge <?php echo ($deposit['method'] == 'ETH Transfer') ? 'crypto' : 'bank'; ?>">
-                                                    <i class="fas <?php echo ($deposit['method'] == 'ETH Transfer') ? 'fa-coins' : 'fa-university'; ?>"></i>
-                                                    <?php echo $deposit['method']; ?>
+                                                <span class="method-badge usdt">
+                                                    <i class="fas fa-coins"></i> USDT TRC20
                                                 </span>
                                             </div>
                                             <div>
@@ -467,9 +435,7 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <div class="mt-2">
                                             <small class="text-muted">
                                                 <i class="fas fa-user"></i> <?php echo htmlspecialchars($deposit['depositor_name']); ?>
-                                                <?php if ($deposit['method'] == 'ETH Transfer'): ?>
-                                                    | <i class="fas fa-link"></i> <span class="text-truncate d-inline-block" style="max-width: 200px;"><?php echo htmlspecialchars($deposit['transaction_ref']); ?></span>
-                                                <?php endif; ?>
+                                                | <i class="fas fa-link"></i> <span class="text-truncate d-inline-block" style="max-width: 200px;"><?php echo htmlspecialchars($deposit['transaction_ref']); ?></span>
                                             </small>
                                         </div>
                                     </div>
@@ -491,8 +457,8 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
                                                 <span class="amount-negative">- $<?php echo number_format($withdrawal['amount'], 2); ?></span>
-                                                <span class="method-badge bank">
-                                                    <i class="fas fa-university"></i> <?php echo htmlspecialchars($withdrawal['method']); ?>
+                                                <span class="method-badge usdt">
+                                                    <i class="fas fa-coins"></i> USDT TRC20
                                                 </span>
                                             </div>
                                             <div>
@@ -524,8 +490,8 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
                                                 <span class="amount-negative">- $<?php echo number_format($withdrawal['amount'], 2); ?></span>
-                                                <span class="method-badge bank">
-                                                    <i class="fas fa-university"></i> <?php echo htmlspecialchars($withdrawal['method']); ?>
+                                                <span class="method-badge usdt">
+                                                    <i class="fas fa-coins"></i> USDT TRC20
                                                 </span>
                                             </div>
                                             <div>
@@ -562,27 +528,20 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </footer>
 
     <script>
-    // Tab switching function
     document.addEventListener('DOMContentLoaded', function() {
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
         
         tabButtons.forEach(function(button) {
             button.addEventListener('click', function() {
-                // Remove active class from all buttons
                 tabButtons.forEach(function(btn) {
                     btn.classList.remove('active');
                 });
-                
-                // Remove active class from all contents
                 tabContents.forEach(function(content) {
                     content.classList.remove('active');
                 });
                 
-                // Add active class to clicked button
                 button.classList.add('active');
-                
-                // Show corresponding content
                 const tabId = button.getAttribute('data-tab');
                 const targetContent = document.getElementById('tab-' + tabId);
                 if (targetContent) {

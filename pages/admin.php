@@ -346,3 +346,88 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+        <!-- Reviews Management Tab -->
+        <button class="tab-btn" data-tab="reviews">
+            <i class="fas fa-star tab-icon text-warning"></i> Reviews
+            <?php 
+                $reviews = json_decode(file_get_contents(__DIR__ . '/../reviews.json'), true);
+                $pending_reviews = array_filter($reviews, function($r) { return $r['status'] == 'pending'; });
+                $pending_count = count($pending_reviews);
+            ?>
+            <span class="badge-count"><?php echo $pending_count; ?></span>
+        </button>
+
+        <!-- Tab Content: Reviews -->
+        <div class="admin-tab-content" id="admin-tab-reviews">
+            <h4>Reviews Management</h4>
+            <?php
+            $reviews = json_decode(file_get_contents(__DIR__ . '/../reviews.json'), true);
+            
+            // Handle review actions
+            if (isset($_GET['approve_review'])) {
+                $id = intval($_GET['approve_review']);
+                foreach($reviews as &$r) {
+                    if ($r['id'] == $id) {
+                        $r['status'] = 'approved';
+                        break;
+                    }
+                }
+                file_put_contents(__DIR__ . '/../reviews.json', json_encode($reviews));
+                $_SESSION['success'] = ['type' => 'success', 'message' => 'Review approved!'];
+                redirect('/pages/admin.php');
+            }
+            
+            if (isset($_GET['delete_review'])) {
+                $id = intval($_GET['delete_review']);
+                $reviews = array_filter($reviews, function($r) use ($id) {
+                    return $r['id'] != $id;
+                });
+                file_put_contents(__DIR__ . '/../reviews.json', json_encode(array_values($reviews)));
+                $_SESSION['success'] = ['type' => 'success', 'message' => 'Review deleted!'];
+                redirect('/pages/admin.php');
+            }
+            ?>
+            <div class="table-wrapper">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Review</th>
+                            <th>Rating</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($reviews as $review): ?>
+                            <tr>
+                                <td><?php echo $review['id']; ?></td>
+                                <td><?php echo htmlspecialchars($review['name']); ?></td>
+                                <td><?php echo htmlspecialchars($review['review']); ?></td>
+                                <td>
+                                    <?php for($i = 1; $i <= 5; $i++): ?>
+                                        <?php if ($i <= $review['rating']): ?>
+                                            <i class="fas fa-star text-warning" style="font-size:0.8rem;"></i>
+                                        <?php else: ?>
+                                            <i class="far fa-star text-warning" style="font-size:0.8rem;"></i>
+                                        <?php endif; ?>
+                                    <?php endfor; ?>
+                                </td>
+                                <td><span class="badge bg-<?php echo $review['status'] == 'approved' ? 'success' : 'warning'; ?>"><?php echo $review['status']; ?></span></td>
+                                <td>
+                                    <?php if ($review['status'] == 'pending'): ?>
+                                        <a href="?approve_review=<?php echo $review['id']; ?>" class="btn btn-success btn-sm" onclick="return confirm('Approve this review?')">
+                                            <i class="fas fa-check"></i> Approve
+                                        </a>
+                                    <?php endif; ?>
+                                    <a href="?delete_review=<?php echo $review['id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Delete this review?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
