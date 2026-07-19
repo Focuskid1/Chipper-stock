@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
             'review' => htmlspecialchars($review),
             'rating' => $rating,
             'timestamp' => date('Y-m-d H:i:s'),
-            'status' => 'approved' // Auto-approved
+            'status' => 'approved'
         ];
         file_put_contents($reviews_file, json_encode($reviews));
         $_SESSION['success'] = ['type' => 'success', 'message' => 'Thank you for your review! It has been published.'];
@@ -46,7 +46,6 @@ if (isset($_GET['delete']) && isLoggedIn() && isset($_SESSION['is_admin']) && $_
 
 $reviews = json_decode(file_get_contents($reviews_file), true);
 $approved_reviews = array_filter($reviews, function($r) { return $r['status'] == 'approved'; });
-// Sort by newest first
 usort($approved_reviews, function($a, $b) {
     return strtotime($b['timestamp']) - strtotime($a['timestamp']);
 });
@@ -66,7 +65,7 @@ usort($approved_reviews, function($a, $b) {
     .review-card .stars { color: #ffc107; font-size: 0.9rem; }
     .review-card .reviewer { font-weight: 600; color: #0d1a2b; }
     .review-card .date { font-size: 0.8rem; color: #6b7a93; }
-    .review-card .delete-btn { opacity: 0.5; transition: opacity 0.2s; }
+    .review-card .delete-btn { opacity: 0.3; transition: opacity 0.2s; }
     .review-card .delete-btn:hover { opacity: 1; }
     .rating-input { font-size: 2rem; color: #dce3ec; cursor: pointer; transition: color 0.2s; }
     .rating-input.active { color: #ffc107; }
@@ -168,21 +167,16 @@ usort($approved_reviews, function($a, $b) {
                                     <?php endfor; ?>
                                 </div>
                             </div>
-                            <div>
+                            <div class="d-flex align-items-center gap-2">
                                 <span class="date"><?php echo date('M d, Y', strtotime($review['timestamp'])); ?></span>
                                 <?php if (isLoggedIn() && isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true): ?>
-                                    <a href="?delete=<?php echo $review['id']; ?>" class="delete-btn text-danger ms-2" onclick="return confirm('Delete this review?')">
+                                    <a href="?delete=<?php echo $review['id']; ?>" class="delete-btn text-danger" onclick="return confirm('Delete this review?')">
                                         <i class="fas fa-trash"></i>
                                     </a>
                                 <?php endif; ?>
                             </div>
                         </div>
                         <p class="mt-2" style="color:#3a4b5e;"><?php echo htmlspecialchars($review['review']); ?></p>
-                        <?php if (isLoggedIn() && isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true): ?>
-                            <div class="mt-1">
-                                <small class="text-muted">ID: <?php echo $review['id']; ?> | Email: <?php echo htmlspecialchars($review['email']); ?></small>
-                            </div>
-                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -210,7 +204,6 @@ usort($approved_reviews, function($a, $b) {
         });
     }
     
-    // Set initial rating
     setRating(5);
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

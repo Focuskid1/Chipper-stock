@@ -36,12 +36,33 @@ function getReferralCount($user_id) {
     return $row ? $row['count'] : 0;
 }
 
-function getReferralBonusEarned($user_id) {
+function getReferralBonusBalance($user_id) {
     global $db;
     $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = ? AND type = 'referral_bonus'");
     $stmt->execute([$user_id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return $row['total'] ?? 0;
+}
+
+function getReferralBonusWithdrawable($user_id) {
+    $ref_count = getReferralCount($user_id);
+    if ($ref_count >= 20) {
+        return getReferralBonusBalance($user_id);
+    }
+    return 0;
+}
+
+function processReferralBonusToBalance($user_id) {
+    $ref_count = getReferralCount($user_id);
+    if ($ref_count >= 20) {
+        $bonus_amount = getReferralBonusBalance($user_id);
+        if ($bonus_amount > 0) {
+            updateBalance($user_id, $bonus_amount);
+            addTransaction($user_id, 'credit', $bonus_amount, 'Referral bonus released (20+ referrals)');
+            return true;
+        }
+    }
+    return false;
 }
 
 function generateReferralCode() {
@@ -116,19 +137,6 @@ function addProfitIfNeeded($user_id) {
     return false;
 }
 
-// --- REFERRAL BONUS SYSTEM ($1 per referral instantly) ---
-function addReferralBonus($referrer_id) {
-    $bonus_amount = 1.00; // $1 per referral
-    
-    // Add to balance
-    updateBalance($referrer_id, $bonus_amount);
-    
-    // Record transaction
-    addTransaction($referrer_id, 'referral_bonus', $bonus_amount, 'Referral bonus: $1');
-    
-    return true;
-}
-
 // --- CURRENCY CONVERSION FUNCTIONS ---
 function getExchangeRate() {
     $api_url = "https://api.exchangerate-api.com/v4/latest/USD";
@@ -188,36 +196,3 @@ function convertCurrency($amount, $from = 'USD', $to = 'NGN') {
     return $amount;
 }
 ?>
-
-// --- REFERRAL BONUS FUNCTIONS ---
-function getReferralBonusBalance($user_id) {
-    global $db;
-    // Get total referral bonuses earned
-    $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = ? AND type = 'referral_bonus'");
-    $stmt->execute([$user_id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $row['total'] ?? 0;
-}
-
-function getReferralBonusWithdrawable($user_id) {
-    $ref_count = getReferralCount($user_id);
-    if ($ref_count >= 20) {
-        return getReferralBonusBalance($user_id);
-    }
-    return 0;
-}
-
-function processReferralBonusToBalance($user_id) {
-    $ref_count = getReferralCount($user_id);
-    if ($ref_count >= 20) {
-        $bonus_amount = getReferralBonusBalance($user_id);
-        if ($bonus_amount > 0) {
-            // Add to balance
-            updateBalance($user_id, $bonus_amount);
-            // Record transaction
-            addTransaction($user_id, 'credit', $bonus_amount, 'Referral bonus released (20+ referrals)');
-            return true;
-        }
-    }
-    return false;
-}
