@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        /* ─── MODERN NAVBAR ─── */
         .modern-navbar {
             background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0d1f3c 100%) !important;
             padding: 12px 0;
@@ -59,8 +58,6 @@
             box-shadow: 0 8px 25px rgba(0,245,160,0.35);
             color: #0a1628 !important;
         }
-
-        /* ─── HERO SECTION ─── */
         .hero-section {
             background: linear-gradient(145deg, #f0f5ff, #ffffff);
             padding: 5rem 1.5rem;
@@ -91,8 +88,6 @@
             box-shadow: 0 12px 32px rgba(13, 110, 253, 0.35);
             transform: translateY(-2px);
         }
-
-        /* ─── TRUST BADGE ─── */
         .trust-badge {
             background: #e8f4fd;
             border: 1px solid #b8d9f5;
@@ -102,8 +97,6 @@
             display: inline-block;
             font-weight: 600;
         }
-
-        /* ─── CARDS ─── */
         .card {
             background: #ffffff;
             border: 1px solid #e9edf2;
@@ -123,8 +116,6 @@
         .card .card-text {
             color: #3a4b5e;
         }
-
-        /* ─── EXAMPLE CARDS ─── */
         .example-card {
             background: #ffffff;
             border: 1px solid #e9edf2;
@@ -137,8 +128,6 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.06);
             border-color: #0d6efd;
         }
-
-        /* ─── TESTIMONIAL CARDS ─── */
         .testimonial-card {
             background: #ffffff;
             border: 1px solid #e9edf2;
@@ -148,8 +137,6 @@
             border-radius: 16px;
             height: 100%;
         }
-
-        /* ─── HOW IT WORKS ─── */
         .step-circle {
             width: 60px;
             height: 60px;
@@ -164,8 +151,6 @@
             margin: 0 auto 12px;
             box-shadow: 0 4px 16px rgba(13, 110, 253, 0.3);
         }
-
-        /* ─── FOOTER ─── */
         .footer {
             margin-top: auto;
             background: #ffffff !important;
@@ -175,8 +160,6 @@
             text-align: center;
         }
         .footer span { color: #6b7a93; }
-
-        /* ─── RESPONSIVE ─── */
         @media (max-width: 768px) {
             .modern-navbar .navbar-brand { font-size: 1.1rem; }
             .hero-section { padding: 2.5rem 1rem; }
@@ -185,12 +168,9 @@
             .step-circle { width: 48px; height: 48px; font-size: 1.2rem; }
         }
     </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- ============================================================
-    NAVBAR
-    ============================================================ -->
+    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg modern-navbar">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
@@ -216,18 +196,16 @@
         </div>
     </nav>
 
-    <!-- ============================================================
-    HERO SECTION
-    ============================================================ -->
+    <!-- HERO SECTION -->
     <div class="hero-section text-center">
         <div class="container-fluid">
             <span class="trust-badge">🔥 Over 50,000 investors trust us</span>
             <h1 class="display-4 fw-bold mt-3"><?php echo SITE_NAME; ?></h1>
             <p class="lead"><?php echo SITE_TAGLINE; ?></p>
             <p class="lead">Earn <strong>15% every 24 hours</strong> on your capital – withdraw anytime.</p>
-            <p class="text-muted">Refer friends and earn <strong>5% bonus</strong> on every deposit they make.</p>
+            <p class="text-muted">Refer friends and earn <strong>$1</strong> instantly per referral!</p>
             <hr class="my-4">
-            <p>Start with as little as $10 – no hidden fees.</p>
+            <p>Start with as little as $5 – USDT TRC20 only.</p>
             <a href="pages/register.php" class="btn btn-success btn-lg">Start Investing Now</a>
             <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
                 <a href="pages/faq.php" class="btn btn-outline-primary"><i class="fas fa-question-circle"></i> FAQ</a>
@@ -236,9 +214,7 @@
         </div>
     </div>
 
-    <!-- ============================================================
-    FEATURES CARDS
-    ============================================================ -->
+    <!-- FEATURES CARDS -->
     <div class="container-fluid my-5">
         <div class="row g-4">
             <div class="col-12 col-md-4">
@@ -259,7 +235,7 @@
                             <i class="fas fa-users"></i>
                         </div>
                         <h5 class="card-title">Referral Rewards</h5>
-                        <p class="card-text">Every investor you bring earns you 5% of their deposit – and they also earn the daily returns, making it a win-win.</p>
+                        <p class="card-text">Every investor you bring earns you <strong>$1 instantly</strong> – and they also earn the daily returns, making it a win-win.</p>
                     </div>
                 </div>
             </div>
@@ -277,9 +253,7 @@
         </div>
     </div>
 
-    <!-- ============================================================
-    HOW IT WORKS (Ponzi Explanation)
-    ============================================================ -->
+    <!-- HOW IT WORKS -->
     <div class="container-fluid my-5 bg-light p-5 rounded">
         <h2 class="text-center mb-4">How <?php echo SITE_NAME; ?> Works</h2>
         <div class="row">
@@ -289,7 +263,7 @@
                     <div class="col-6 col-md-3 text-center">
                         <div class="step-circle">1</div>
                         <p class="fw-bold">Deposit</p>
-                        <p class="small text-muted">Fund your account</p>
+                        <p class="small text-muted">Send USDT TRC20</p>
                     </div>
                     <div class="col-6 col-md-3 text-center">
                         <div class="step-circle">2</div>
@@ -311,9 +285,7 @@
         </div>
     </div>
 
-    <!-- ============================================================
-    TRUSTED PLATFORMS (Examples)
-    ============================================================ -->
+    <!-- TRUSTED PLATFORMS -->
     <div class="container-fluid my-5">
         <h2 class="text-center mb-4">Trusted by Thousands – Like These Platforms</h2>
         <div class="row g-3">
@@ -339,9 +311,7 @@
         <p class="text-center mt-3"><em>These platforms have paid millions to investors – <?php echo SITE_NAME; ?> is the next evolution.</em></p>
     </div>
 
-    <!-- ============================================================
-    TESTIMONIALS
-    ============================================================ -->
+    <!-- TESTIMONIALS -->
     <div class="container-fluid my-5 bg-white p-4 rounded shadow-sm">
         <h2 class="text-center mb-4">What Our Investors Say</h2>
         <div class="row g-3">
@@ -364,11 +334,14 @@
                 </div>
             </div>
         </div>
+        <div class="text-center mt-3">
+            <a href="pages/reviews.php" class="btn btn-outline-primary">
+                <i class="fas fa-star"></i> Read All Reviews
+            </a>
+        </div>
     </div>
 
-    <!-- ============================================================
-    CALL TO ACTION
-    ============================================================ -->
+    <!-- CALL TO ACTION -->
     <div class="container-fluid my-5 text-center" style="background: linear-gradient(135deg, #0a1628, #1a2a4a); padding: 4rem 2rem; border-radius: 20px;">
         <h2 class="text-white">Ready to Start Earning?</h2>
         <p class="text-light opacity-75">Join thousands of investors already making 15% daily returns.</p>
@@ -377,9 +350,7 @@
         </a>
     </div>
 
-    <!-- ============================================================
-    FOOTER
-    ============================================================ -->
+    <!-- FOOTER -->
     <footer class="footer mt-auto">
         <div class="container-fluid">
             <span>&copy; 2026 <?php echo SITE_NAME; ?> – All rights reserved.</span>

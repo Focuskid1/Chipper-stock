@@ -24,16 +24,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
             'review' => htmlspecialchars($review),
             'rating' => $rating,
             'timestamp' => date('Y-m-d H:i:s'),
-            'status' => 'pending'
+            'status' => 'approved' // Auto-approved
         ];
         file_put_contents($reviews_file, json_encode($reviews));
-        $_SESSION['success'] = ['type' => 'success', 'message' => 'Thank you for your review! It will be published after moderation.'];
+        $_SESSION['success'] = ['type' => 'success', 'message' => 'Thank you for your review! It has been published.'];
         redirect('/pages/reviews.php');
     }
 }
 
+// Handle delete (admin only)
+if (isset($_GET['delete']) && isLoggedIn() && isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true) {
+    $id = intval($_GET['delete']);
+    $reviews = json_decode(file_get_contents($reviews_file), true);
+    $reviews = array_filter($reviews, function($r) use ($id) {
+        return $r['id'] != $id;
+    });
+    file_put_contents($reviews_file, json_encode(array_values($reviews)));
+    $_SESSION['success'] = ['type' => 'success', 'message' => 'Review deleted!'];
+    redirect('/pages/reviews.php');
+}
+
 $reviews = json_decode(file_get_contents($reviews_file), true);
 $approved_reviews = array_filter($reviews, function($r) { return $r['status'] == 'approved'; });
+// Sort by newest first
+usort($approved_reviews, function($a, $b) {
+    return strtotime($b['timestamp']) - strtotime($a['timestamp']);
+});
 ?>
 <!DOCTYPE html>
 <html>
@@ -44,14 +60,18 @@ $approved_reviews = array_filter($reviews, function($r) { return $r['status'] ==
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="../assets/css/style.css">
 <style>
-    .review-section { background: #f8faff; padding: 40px 0; }
-    .review-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #e9edf2; }
+    .review-section { background: #f8faff; padding: 40px 0; min-height: 80vh; }
+    .review-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #e9edf2; transition: all 0.3s ease; }
+    .review-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
     .review-card .stars { color: #ffc107; font-size: 0.9rem; }
     .review-card .reviewer { font-weight: 600; color: #0d1a2b; }
     .review-card .date { font-size: 0.8rem; color: #6b7a93; }
+    .review-card .delete-btn { opacity: 0.5; transition: opacity 0.2s; }
+    .review-card .delete-btn:hover { opacity: 1; }
     .rating-input { font-size: 2rem; color: #dce3ec; cursor: pointer; transition: color 0.2s; }
     .rating-input.active { color: #ffc107; }
     .rating-input:hover { color: #ffc107; }
+    .review-count-badge { background: #e8f4fd; padding: 2px 12px; border-radius: 30px; font-size: 0.85rem; color: #0d6efd; }
 </style>
 </head>
 <body>
@@ -79,7 +99,11 @@ $approved_reviews = array_filter($reviews, function($r) { return $r['status'] ==
 
     <div class="review-section">
         <div class="container" style="max-width:800px;">
-            <h1 class="text-center mb-4">What Our Users Say</h1>
+            <div class="text-center mb-4">
+                <h1>What Our Investors Say</h1>
+                <p class="text-muted">Read reviews from our community of investors</p>
+                <span class="review-count-badge"><i class="fas fa-star text-warning"></i> <?php echo count($approved_reviews); ?> Reviews</span>
+            </div>
             
             <?php displayFlash('error'); displayFlash('success'); ?>
             
@@ -87,6 +111,7 @@ $approved_reviews = array_filter($reviews, function($r) { return $r['status'] ==
             <div class="card mb-4">
                 <div class="card-body">
                     <h5 class="card-title">Share Your Experience</h5>
+                    <p class="text-muted small">Your review will be published immediately.</p>
                     <form method="POST">
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -113,7 +138,7 @@ $approved_reviews = array_filter($reviews, function($r) { return $r['status'] ==
                                 <textarea name="review" class="form-control" rows="4" placeholder="Write your review here..." required></textarea>
                             </div>
                             <div class="col-12">
-                                <button type="submit" name="submit_review" class="btn btn-success">Submit Review</button>
+                                <button type="submit" name="submit_review" class="btn btn-success"><i class="fas fa-paper-plane"></i> Submit Review</button>
                             </div>
                         </div>
                     </form>
@@ -121,12 +146,15 @@ $approved_reviews = array_filter($reviews, function($r) { return $r['status'] ==
             </div>
             
             <!-- Display Reviews -->
-            <h3 class="mb-3">User Reviews</h3>
             <?php if (empty($approved_reviews)): ?>
-                <p class="text-muted">No reviews yet. Be the first to share your experience!</p>
+                <div class="text-center py-5">
+                    <i class="fas fa-comment-dots" style="font-size: 3rem; color: #dce3ec; margin-bottom: 15px;"></i>
+                    <h5>No reviews yet</h5>
+                    <p class="text-muted">Be the first to share your experience!</p>
+                </div>
             <?php else: ?>
                 <?php foreach($approved_reviews as $review): ?>
-                    <div class="review-card">
+                    <div class="review-card" id="review-<?php echo $review['id']; ?>">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <span class="reviewer"><?php echo htmlspecialchars($review['name']); ?></span>
@@ -140,9 +168,21 @@ $approved_reviews = array_filter($reviews, function($r) { return $r['status'] ==
                                     <?php endfor; ?>
                                 </div>
                             </div>
-                            <span class="date"><?php echo date('M d, Y', strtotime($review['timestamp'])); ?></span>
+                            <div>
+                                <span class="date"><?php echo date('M d, Y', strtotime($review['timestamp'])); ?></span>
+                                <?php if (isLoggedIn() && isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true): ?>
+                                    <a href="?delete=<?php echo $review['id']; ?>" class="delete-btn text-danger ms-2" onclick="return confirm('Delete this review?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
                         </div>
                         <p class="mt-2" style="color:#3a4b5e;"><?php echo htmlspecialchars($review['review']); ?></p>
+                        <?php if (isLoggedIn() && isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true): ?>
+                            <div class="mt-1">
+                                <small class="text-muted">ID: <?php echo $review['id']; ?> | Email: <?php echo htmlspecialchars($review['email']); ?></small>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>

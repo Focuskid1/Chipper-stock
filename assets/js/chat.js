@@ -1,22 +1,26 @@
 (function() {
     'use strict';
     
-    // Configuration
+    // Check if chat should be disabled on certain pages
+    const disabledPages = ['index.php', 'login.php', 'register.php'];
+    const currentPage = window.location.pathname.split('/').pop();
+    
+    if (disabledPages.includes(currentPage)) {
+        return;
+    }
+    
     const CONFIG = {
         chatUrl: '/includes/chat.php',
-        pollInterval: 3000, // Poll every 3 seconds
+        pollInterval: 3000,
         maxMessages: 100
     };
     
-    // State
     let isOpen = false;
     let isMinimized = false;
     let lastMessageId = 0;
     let userName = '';
     let pollInterval = null;
     let isSending = false;
-    
-    // DOM elements (created dynamically)
     let chatWidget = null;
     let chatToggle = null;
     let chatWindow = null;
@@ -25,9 +29,7 @@
     let chatSendBtn = null;
     let chatHeader = null;
     
-    // Create chat widget
     function createChatWidget() {
-        // Main widget container
         chatWidget = document.createElement('div');
         chatWidget.id = 'chat-widget';
         chatWidget.style.cssText = `
@@ -38,7 +40,6 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         `;
         
-        // Toggle button (floating)
         chatToggle = document.createElement('div');
         chatToggle.id = 'chat-toggle';
         chatToggle.style.cssText = `
@@ -67,7 +68,6 @@
             this.style.boxShadow = '0 4px 20px rgba(0, 245, 160, 0.4)';
         };
         
-        // Chat window
         chatWindow = document.createElement('div');
         chatWindow.id = 'chat-window';
         chatWindow.style.cssText = `
@@ -88,7 +88,6 @@
             animation: chatSlideIn 0.3s ease;
         `;
         
-        // Chat header
         chatHeader = document.createElement('div');
         chatHeader.style.cssText = `
             background: linear-gradient(135deg, #0a1628, #1a2a4a);
@@ -116,7 +115,6 @@
             </div>
         `;
         
-        // Chat messages area
         chatMessages = document.createElement('div');
         chatMessages.id = 'chat-messages';
         chatMessages.style.cssText = `
@@ -129,8 +127,8 @@
             gap: 8px;
         `;
         
-        // Welcome message
         const welcomeMsg = document.createElement('div');
+        welcomeMsg.className = 'welcome-msg';
         welcomeMsg.style.cssText = `
             text-align: center;
             color: #6b7a93;
@@ -144,7 +142,6 @@
         `;
         chatMessages.appendChild(welcomeMsg);
         
-        // Chat input area
         const chatInputArea = document.createElement('div');
         chatInputArea.style.cssText = `
             padding: 12px 16px;
@@ -205,17 +202,14 @@
         chatInputArea.appendChild(chatInput);
         chatInputArea.appendChild(chatSendBtn);
         
-        // Assemble chat window
         chatWindow.appendChild(chatHeader);
         chatWindow.appendChild(chatMessages);
         chatWindow.appendChild(chatInputArea);
         
-        // Assemble widget
         chatWidget.appendChild(chatToggle);
         chatWidget.appendChild(chatWindow);
         document.body.appendChild(chatWidget);
         
-        // Add CSS animations
         const style = document.createElement('style');
         style.textContent = `
             @keyframes chatSlideIn {
@@ -273,13 +267,11 @@
         `;
         document.head.appendChild(style);
         
-        // Event listeners
         chatToggle.onclick = toggleChat;
         document.getElementById('chat-minimize').onclick = minimizeChat;
         document.getElementById('chat-close').onclick = closeChat;
     }
     
-    // Toggle chat
     function toggleChat() {
         if (isOpen) {
             if (isMinimized) {
@@ -301,14 +293,9 @@
         chatToggle.style.boxShadow = '0 4px 20px rgba(239, 68, 68, 0.4)';
         document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
         
-        // Start polling for messages
         if (pollInterval) clearInterval(pollInterval);
         pollInterval = setInterval(fetchMessages, CONFIG.pollInterval);
-        
-        // Fetch initial messages
         fetchMessages();
-        
-        // Focus input after a moment
         setTimeout(() => chatInput.focus(), 300);
     }
     
@@ -331,7 +318,6 @@
         chatToggle.innerHTML = '<i class="fas fa-times"></i>';
         chatToggle.style.background = 'linear-gradient(135deg, #f87171, #ef4444)';
         chatToggle.style.boxShadow = '0 4px 20px rgba(239, 68, 68, 0.4)';
-        document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
         
         pollInterval = setInterval(fetchMessages, CONFIG.pollInterval);
         fetchMessages();
@@ -352,7 +338,6 @@
         }
     }
     
-    // Send message
     function sendMessage() {
         const message = chatInput.value.trim();
         if (!message || isSending) return;
@@ -361,7 +346,6 @@
         chatSendBtn.disabled = true;
         chatSendBtn.style.opacity = '0.6';
         
-        // Get user name from session or prompt
         if (!userName) {
             userName = prompt('Please enter your name:', 'Guest') || 'Guest';
         }
@@ -391,7 +375,6 @@
         });
     }
     
-    // Fetch messages
     function fetchMessages() {
         fetch(CONFIG.chatUrl + '?action=get&last_id=' + lastMessageId)
             .then(response => response.json())
@@ -409,9 +392,7 @@
             .catch(err => console.error('Fetch error:', err));
     }
     
-    // Add message to UI
     function addMessageToUI(msg) {
-        // Remove welcome message if present
         const welcome = chatMessages.querySelector('.welcome-msg');
         if (welcome) welcome.remove();
         
@@ -431,7 +412,6 @@
         }, 50);
     }
     
-    // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         createChatWidget();
     });

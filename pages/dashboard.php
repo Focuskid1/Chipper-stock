@@ -266,6 +266,8 @@ $confirmed_withdrawals = $stmt->fetchAll(PDO::FETCH_ASSOC);
         display: inline-block;
     }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="../assets/js/chat.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg modern-navbar">
