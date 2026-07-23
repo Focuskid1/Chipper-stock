@@ -1,13 +1,15 @@
 <?php
-echo "pdo_pgsql loaded: " . (extension_loaded('pdo_pgsql') ? '✅ Yes' : '❌ No') . "<br>";
 $url = getenv('DATABASE_URL');
-echo "DATABASE_URL set: " . ($url ? '✅ Yes' : '❌ No') . "<br>";
+echo "DATABASE_URL is set: " . ($url ? '✅ Yes' : '❌ No') . "<br>";
 if ($url) {
+    echo "URL: " . htmlspecialchars($url) . "<br>";
     try {
         $db = new PDO($url);
         echo "✅ Connected successfully!";
     } catch (PDOException $e) {
         echo "❌ Connection failed: " . $e->getMessage();
     }
+} else {
+    echo "❌ DATABASE_URL not set!";
 }
 ?>
