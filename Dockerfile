@@ -1,14 +1,21 @@
-FROM php:8.2-apache-bullseye
+FROM php:8.2-apache
 
 RUN a2enmod rewrite
 
-# Install PostgreSQL extension via system package manager
-RUN apt-get update && apt-get install -y php-pgsql && rm -rf /var/lib/apt/lists/*
+# Install PostgreSQL client libraries
+RUN apt-get update && apt-get install -y libpq-dev
 
-# Write an ini file to ensure the extension is loaded
-RUN echo "extension=pdo_pgsql.so" > /usr/local/etc/php/conf.d/20-pdo_pgsql.ini
+# Install pdo_pgsql
+RUN docker-php-ext-install pdo pdo_pgsql
 
-# Verify the driver is loaded at build time (will fail if not)
+# Enable the extension using the official helper
+RUN docker-php-ext-enable pdo_pgsql
+
+# Override the default php.ini with our custom one
+# This ensures the extension is loaded for both CLI and Apache
+COPY php.ini /usr/local/etc/php/conf.d/99-custom.ini
+
+# Verify the extension is loaded (build will fail if not)
 RUN php -m | grep -q pdo_pgsql || (echo "❌ pdo_pgsql NOT loaded" && exit 1)
 
 # Bind Apache to Render's dynamic PORT
