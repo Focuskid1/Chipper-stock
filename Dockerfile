@@ -3,14 +3,12 @@ FROM php:8.2-apache-bullseye
 RUN a2enmod rewrite
 
 # Install PostgreSQL extension via system package manager
-RUN apt-get update && apt-get install -y \
-    php8.2-pgsql \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y php-pgsql && rm -rf /var/lib/apt/lists/*
 
-# Copy a custom php.ini to ensure the extension is loaded
+# Write an ini file to ensure the extension is loaded
 RUN echo "extension=pdo_pgsql.so" > /usr/local/etc/php/conf.d/20-pdo_pgsql.ini
 
-# Verify the driver is loaded (build will fail if not)
+# Verify the driver is loaded at build time (will fail if not)
 RUN php -m | grep -q pdo_pgsql || (echo "❌ pdo_pgsql NOT loaded" && exit 1)
 
 # Bind Apache to Render's dynamic PORT
