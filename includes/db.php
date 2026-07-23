@@ -27,21 +27,6 @@ if ($db_url) {
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
         // Create tables (PostgreSQL syntax)
-        $db->exec("CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            email TEXT,
-            phone TEXT,
-            balance REAL DEFAULT 0,
-            referral_code TEXT UNIQUE,
-            referred_by INTEGER DEFAULT 0,
-            total_deposits REAL DEFAULT 0,
-            total_withdrawals REAL DEFAULT 0,
-            daily_profit REAL DEFAULT 0,
-            registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )");
-
         $db->exec("CREATE TABLE IF NOT EXISTS deposits (
             id SERIAL PRIMARY KEY,
             user_id INTEGER,
