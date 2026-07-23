@@ -169,3 +169,14 @@ if ($db_url) {
 
 // Make $db globally accessible
 ?>
+
+// --- Create reviews table if it doesn't exist ---
+$db->exec("CREATE TABLE IF NOT EXISTS reviews (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT,
+    review TEXT NOT NULL,
+    rating INTEGER DEFAULT 5,
+    status TEXT DEFAULT 'approved',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");

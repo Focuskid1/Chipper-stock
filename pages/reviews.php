@@ -2,12 +2,6 @@
 require_once '../includes/config.php';
 require_once '../includes/functions.php';
 
-// Initialize reviews file
-$reviews_file = __DIR__ . '/../reviews.json';
-if (!file_exists($reviews_file)) {
-    file_put_contents($reviews_file, json_encode([]));
-}
-
 // Handle review submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
     $name = trim($_POST['name']) ?: 'Anonymous';
@@ -16,17 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
     $rating = intval($_POST['rating'] ?? 5);
     
     if (!empty($review)) {
-        $reviews = json_decode(file_get_contents($reviews_file), true);
-        $reviews[] = [
-            'id' => count($reviews) + 1,
-            'name' => htmlspecialchars($name),
-            'email' => htmlspecialchars($email),
-            'review' => htmlspecialchars($review),
-            'rating' => $rating,
-            'timestamp' => date('Y-m-d H:i:s'),
-            'status' => 'approved'
-        ];
-        file_put_contents($reviews_file, json_encode($reviews));
+        $stmt = $db->prepare("INSERT INTO reviews (name, email, review, rating, status) VALUES (?, ?, ?, ?, 'approved')");
+        $stmt->execute([$name, $email, $review, $rating]);
         $_SESSION['success'] = ['type' => 'success', 'message' => 'Thank you for your review! It has been published.'];
         redirect('/pages/reviews.php');
     }
@@ -35,20 +20,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_review'])) {
 // Handle delete (admin only)
 if (isset($_GET['delete']) && isLoggedIn() && isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true) {
     $id = intval($_GET['delete']);
-    $reviews = json_decode(file_get_contents($reviews_file), true);
-    $reviews = array_filter($reviews, function($r) use ($id) {
-        return $r['id'] != $id;
-    });
-    file_put_contents($reviews_file, json_encode(array_values($reviews)));
+    $stmt = $db->prepare("DELETE FROM reviews WHERE id = ?");
+    $stmt->execute([$id]);
     $_SESSION['success'] = ['type' => 'success', 'message' => 'Review deleted!'];
     redirect('/pages/reviews.php');
 }
 
-$reviews = json_decode(file_get_contents($reviews_file), true);
-$approved_reviews = array_filter($reviews, function($r) { return $r['status'] == 'approved'; });
-usort($approved_reviews, function($a, $b) {
-    return strtotime($b['timestamp']) - strtotime($a['timestamp']);
-});
+// Get all approved reviews, newest first
+$stmt = $db->query("SELECT * FROM reviews WHERE status = 'approved' ORDER BY created_at DESC");
+$approved_reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html>
@@ -168,7 +148,7 @@ usort($approved_reviews, function($a, $b) {
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <span class="date"><?php echo date('M d, Y', strtotime($review['timestamp'])); ?></span>
+                                <span class="date"><?php echo date('M d, Y', strtotime($review['created_at'])); ?></span>
                                 <?php if (isLoggedIn() && isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true): ?>
                                     <a href="?delete=<?php echo $review['id']; ?>" class="delete-btn text-danger" onclick="return confirm('Delete this review?')">
                                         <i class="fas fa-trash"></i>
