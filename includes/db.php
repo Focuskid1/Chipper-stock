@@ -7,8 +7,16 @@ $db_url = getenv('DATABASE_URL');
 
 try {
     if ($db_url) {
-        // --- PostgreSQL (Render) – Direct PDO connection ---
-        $db = new PDO($db_url);
+        // --- PostgreSQL (Render) – Parse URL into DSN ---
+        $parsed = parse_url($db_url);
+        $host = $parsed['host'];
+        $port = $parsed['port'] ?? '5432';
+        $dbname = ltrim($parsed['path'], '/');
+        $user = $parsed['user'];
+        $pass = $parsed['pass'];
+        $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;user=$user;password=$pass";
+
+        $db = new PDO($dsn);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
@@ -158,7 +166,7 @@ try {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )");
 
-        // Indexes (ignore errors if they exist)
+        // SQLite indexes (ignore errors if they exist)
         @$db->exec("CREATE INDEX idx_users_username ON users(username)");
         @$db->exec("CREATE INDEX idx_users_referral_code ON users(referral_code)");
         @$db->exec("CREATE INDEX idx_deposits_user_id ON deposits(user_id)");
