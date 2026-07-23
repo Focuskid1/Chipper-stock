@@ -1,13 +1,13 @@
 <?php
 // ============================================================
-// DATABASE CONNECTION (PostgreSQL on Render, SQLite locally)
+// DATABASE CONNECTION – PostgreSQL on Render, SQLite locally
 // ============================================================
 
 $db_url = getenv('DATABASE_URL');
 
 try {
     if ($db_url) {
-        // --- PostgreSQL (Render) ---
+        // --- PostgreSQL (Render) – Direct PDO connection ---
         $db = new PDO($db_url);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
@@ -79,7 +79,7 @@ try {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
 
-        // Indexes
+        // Indexes for performance
         $db->exec("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)");
         $db->exec("CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)");
         $db->exec("CREATE INDEX IF NOT EXISTS idx_deposits_user_id ON deposits(user_id)");
@@ -91,7 +91,7 @@ try {
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-        // SQLite tables
+        // SQLite tables (same schema, different syntax)
         $db->exec("CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -158,7 +158,7 @@ try {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )");
 
-        // SQLite indexes (ignore errors if they exist)
+        // Indexes (ignore errors if they exist)
         @$db->exec("CREATE INDEX idx_users_username ON users(username)");
         @$db->exec("CREATE INDEX idx_users_referral_code ON users(referral_code)");
         @$db->exec("CREATE INDEX idx_deposits_user_id ON deposits(user_id)");
@@ -166,8 +166,9 @@ try {
     }
 
 } catch (PDOException $e) {
-    // Log the error and show a user-friendly message
+    // Log the real error to Render logs
     error_log("Database connection failed: " . $e->getMessage());
+    // Show a user‑friendly message
     die("Database error. Please check your configuration.");
 }
 
